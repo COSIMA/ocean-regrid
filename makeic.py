@@ -15,14 +15,6 @@ from grid import Grid
 import ESMF
 
 """
-Possible sources:
-
-https://www.nodc.noaa.gov/OC5/woa13/woa13data.html
-http://www.esrl.noaa.gov/psd/data/gridded/data.nodc.woa98.html
-http://www.esrl.noaa.gov/psd/data/gridded/data.godas.html
-
-Also see:
-https://reanalyses.org/ocean/overview-current-reanalyses
 """
 
 def regrid_columns(data, src_z, dest_z, plot_results=False):
@@ -104,24 +96,32 @@ def main():
     obs_scrip_file = 'obs_scrip.nc'
     obs_grid.write_scrip(obs_scrip_file, ' '.join(sys.argv))
 
-    # Dest grid in scrip format.
-    dest_grid = ESMF.Grid(filename=obs_scrip_file,
+    src_grid = ESMF.Grid(filename=obs_scrip_file,
+                            filetype=ESMF.FileFormat.SCRIP)
+
+    dest_grid = ESMF.Grid(filename=mom_scrip_file,
                             filetype=ESMF.FileFormat.SCRIP)
 
     # Create temp and salinity source fields.
-    temp_dest = ESMF.Field(dest_grid, 'temp', staggerloc=ESMF.StaggerLoc.CENTER)
-    sal_dest = ESMF.Field(dest_grid, 'salinity', staggerloc=ESMF.StaggerLoc.CENTER)
+    temp_src = ESMF.Field(src_grid, 'temp_src',
+                            staggerloc=ESMF.StaggerLoc.CENTER)
+    temp_dest = ESMF.Field(dest_grid, 'temp_dest',
+                            staggerloc=ESMF.StaggerLoc.CENTER)
 
-    # create an object to regrid data from the source to the destination field
-    #regrid = ESMF.Regrid(srcfield, dstfield,
-#			 regrid_method=ESMF.RegridMethod.BILINEAR,
-#			 unmapped_action=ESMF.UnmappedAction.ERROR)
-
-    # do the regridding from source to destination field
-    #dstfield = regrid(srcfield, dstfield)
+    # Create an object to regrid data 
+    regrid = ESMF.Regrid(temp_src, temp_dest,
+			 regrid_method=ESMF.RegridMethod.BILINEAR,
+			 unmapped_action=ESMF.UnmappedAction.ERROR)
 
     # Regrid obs columns onto model vertical grid.
     temp = regrid_columns(temp, z, mom_grid.z, plot_results=True)
+    temp_src = temp[0, :, :]
+
+    # Do the regridding
+    temp_dest = regrid(temp_src, temp_dest)
+
+    import pdb
+    pdb.set_trace()
 
 if __name__ == '__main__':
     sys.exit(main())
