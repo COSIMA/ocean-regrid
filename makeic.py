@@ -99,7 +99,7 @@ def main():
     src_grid = ESMF.Grid(filename=obs_scrip_file,
                             filetype=ESMF.FileFormat.SCRIP)
 
-    dest_grid = ESMF.Grid(filename=obs_scrip_file,
+    dest_grid = ESMF.Grid(filename=mom_scrip_file,
                             filetype=ESMF.FileFormat.SCRIP)
 
     #dest_grid = ESMF.Grid(filename=mom_scrip_file,
@@ -111,7 +111,10 @@ def main():
     temp_dest = ESMF.Field(dest_grid, 'temp_dest',
                             staggerloc=ESMF.StaggerLoc.CENTER)
 
+    temp_dest.data[:] = 1e20
     print('HERE 1')
+    import pdb
+    pdb.set_trace()
 
     # Create an object to regrid data 
     regrid = ESMF.Regrid(temp_src, temp_dest,
@@ -122,9 +125,11 @@ def main():
 
     # Regrid obs columns onto model vertical grid.
     temp = regrid_columns(temp, z, mom_grid.z, plot_results=True)
-    temp_src = temp[0, :, :]
+    temp_src.data[:] = temp[0, :, :].transpose()
 
     print('HERE 3')
+    import pdb
+    pdb.set_trace()
 
     # Do the regridding
     temp_dest = regrid(temp_src, temp_dest)
