@@ -99,8 +99,11 @@ def main():
     src_grid = ESMF.Grid(filename=obs_scrip_file,
                             filetype=ESMF.FileFormat.SCRIP)
 
-    dest_grid = ESMF.Grid(filename=mom_scrip_file,
+    dest_grid = ESMF.Grid(filename=obs_scrip_file,
                             filetype=ESMF.FileFormat.SCRIP)
+
+    #dest_grid = ESMF.Grid(filename=mom_scrip_file,
+    #                        filetype=ESMF.FileFormat.SCRIP)
 
     # Create temp and salinity source fields.
     temp_src = ESMF.Field(src_grid, 'temp_src',
@@ -108,17 +111,25 @@ def main():
     temp_dest = ESMF.Field(dest_grid, 'temp_dest',
                             staggerloc=ESMF.StaggerLoc.CENTER)
 
+    print('HERE 1')
+
     # Create an object to regrid data 
     regrid = ESMF.Regrid(temp_src, temp_dest,
-			 regrid_method=ESMF.RegridMethod.BILINEAR,
+			 #regrid_method=ESMF.RegridMethod.BILINEAR,
+			 regrid_method=ESMF.RegridMethod.NEAREST_STOD,
 			 unmapped_action=ESMF.UnmappedAction.ERROR)
+    print('HERE 2')
 
     # Regrid obs columns onto model vertical grid.
     temp = regrid_columns(temp, z, mom_grid.z, plot_results=True)
     temp_src = temp[0, :, :]
 
+    print('HERE 3')
+
     # Do the regridding
     temp_dest = regrid(temp_src, temp_dest)
+
+    print('HERE 4')
 
     import pdb
     pdb.set_trace()
