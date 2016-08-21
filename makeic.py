@@ -4,10 +4,13 @@ from __future__ import print_function
 
 import sys, os
 import argparse
-from scipy import interp
-from scipy import ndimage as nd
 import numpy as np
 import netCDF4 as nc
+
+from scipy import interp
+from scipy import ndimage as nd
+import mpl_toolkits
+from mpl_toolkits.basemap import Basemap
 
 from mom_grid import MomGrid
 from grid import Grid
@@ -15,52 +18,6 @@ from latlon_grid import LatLonGrid
 
 """
 """
-
-def esmf_regrid(obs_grid, mom_grid, data):
-
-    mom_scrip_file = 'model_scrip.nc'
-    mom_grid.write_scrip(mom_scrip_file, ' '.join(sys.argv))
-
-    obs_scrip_file = 'obs_scrip.nc'
-    obs_grid.write_scrip(obs_scrip_file, ' '.join(sys.argv))
-
-    src_grid = ESMF.Grid(filename=obs_scrip_file,
-                            filetype=ESMF.FileFormat.SCRIP)
-
-    dest_grid = ESMF.Grid(filename=mom_scrip_file,
-                            filetype=ESMF.FileFormat.SCRIP)
-
-    # Create temp and salinity source fields.
-    temp_src = ESMF.Field(src_grid, 'temp_src',
-                            staggerloc=ESMF.StaggerLoc.CENTER)
-    temp_dest = ESMF.Field(dest_grid, 'temp_dest',
-                            staggerloc=ESMF.StaggerLoc.CENTER)
-
-    temp_dest.data[:] = 1e20
-    print('HERE 1')
-    import pdb
-    pdb.set_trace()
-
-    # Create an object to regrid data 
-    regrid = ESMF.Regrid(temp_src, temp_dest,
-			 #regrid_method=ESMF.RegridMethod.BILINEAR,
-			 regrid_method=ESMF.RegridMethod.NEAREST_STOD,
-			 unmapped_action=ESMF.UnmappedAction.ERROR)
-    print('HERE 2')
-
-    temp_src.data[:] = temp[0, :, :].transpose()
-
-    print('HERE 3')
-    import pdb
-    pdb.set_trace()
-
-    # Do the regridding
-    temp_dest = regrid(temp_src, temp_dest)
-
-    print('HERE 4')
-
-    import pdb
-    pdb.set_trace()
 
 def regrid_columns(data, src_z, dest_z, plot_results=False):
     """
@@ -179,29 +136,21 @@ def main():
     # Now extend obs to cover whole globe
     gtemp = extend_obs(obs_grid, global_grid, temp)
 
-    if args.use_esmf:
-        import ESMF
-        esmf_regrid(obs_grid, mom_grid, temp)
-    else:
-        import mpl_toolkits
-        from mpl_toolkits.basemap import Basemap
+    # Move lons from -280 to 80 to 0 to 360 for interpolation step.
+    # Use basemap shift grid.
+    x_t = np.copy(mom_grid.x_t)
+    x_t[mom_grid.x_t < 0] = mom_grid.x_t[mom_grid.x_t < 0] + 360
 
-        # Move lons from -280 to 80 to 0 to 360 for interpolation step.
-        # Use basemap shift grid.
-        x_t = np.copy(mom_grid.x_t)
-        x_t[mom_grid.x_t < 0] = mom_grid.x_t[mom_grid.x_t < 0] + 360
+    # Bilinear interpolation
+    temp_bi = mpl_toolkits.basemap.interp(gtemp[0,:,:],
+                                          global_grid.x_t[0, :],
+                                          global_grid.y_t[:, 0],
+                                          x_t, mom_grid.y_t, order=1)
+    # Apply ocean mask.
+    temp = np.ma.array(temp_bi, mask=mom_grid.mask)
 
-        # Bilinear interpolation
-        temp_bi = mpl_toolkits.basemap.interp(gtemp[0,:,:],
-                                              global_grid.x_t[0, :],
-                                              global_grid.y_t[:, 0],
-                                              x_t, mom_grid.y_t, order=1)
-
-        # Apply ocean mask.
-        temp = np.ma.array(temp_bi, mask=mom_grid.mask)
-
-        import pdb
-        pdb.set_trace()
+    import pdb
+    pdb.set_trace()
 
 
 if __name__ == '__main__':
