@@ -11,6 +11,7 @@ class Grid(object):
 
         self.num_lat_points = len(lats)
         self.num_lon_points = len(lons)
+        self.num_levels = len(levels)
 
         if len(lons.shape) == 1:
             # We expect this to be a regular grid.

@@ -4,18 +4,63 @@ from __future__ import print_function
 
 import sys, os
 import argparse
-from scipy.interpolate import UnivariateSpline
 from scipy import interp
+from scipy import ndimage as nd
 import numpy as np
 import netCDF4 as nc
 
 from mom_grid import MomGrid
 from grid import Grid
-
-import ESMF
+from latlon_grid import LatLonGrid
 
 """
 """
+
+def esmf_regrid(obs_grid, mom_grid, data):
+
+    mom_scrip_file = 'model_scrip.nc'
+    mom_grid.write_scrip(mom_scrip_file, ' '.join(sys.argv))
+
+    obs_scrip_file = 'obs_scrip.nc'
+    obs_grid.write_scrip(obs_scrip_file, ' '.join(sys.argv))
+
+    src_grid = ESMF.Grid(filename=obs_scrip_file,
+                            filetype=ESMF.FileFormat.SCRIP)
+
+    dest_grid = ESMF.Grid(filename=mom_scrip_file,
+                            filetype=ESMF.FileFormat.SCRIP)
+
+    # Create temp and salinity source fields.
+    temp_src = ESMF.Field(src_grid, 'temp_src',
+                            staggerloc=ESMF.StaggerLoc.CENTER)
+    temp_dest = ESMF.Field(dest_grid, 'temp_dest',
+                            staggerloc=ESMF.StaggerLoc.CENTER)
+
+    temp_dest.data[:] = 1e20
+    print('HERE 1')
+    import pdb
+    pdb.set_trace()
+
+    # Create an object to regrid data 
+    regrid = ESMF.Regrid(temp_src, temp_dest,
+			 #regrid_method=ESMF.RegridMethod.BILINEAR,
+			 regrid_method=ESMF.RegridMethod.NEAREST_STOD,
+			 unmapped_action=ESMF.UnmappedAction.ERROR)
+    print('HERE 2')
+
+    temp_src.data[:] = temp[0, :, :].transpose()
+
+    print('HERE 3')
+    import pdb
+    pdb.set_trace()
+
+    # Do the regridding
+    temp_dest = regrid(temp_src, temp_dest)
+
+    print('HERE 4')
+
+    import pdb
+    pdb.set_trace()
 
 def regrid_columns(data, src_z, dest_z, plot_results=False):
     """
@@ -50,6 +95,36 @@ def regrid_columns(data, src_z, dest_z, plot_results=False):
 
     return new_data
 
+
+def extend_obs(obs_grid, global_grid, var):
+    """
+    Use nearest neighbour to extend obs over the whole globe, including land.
+    """
+
+    # Create masked array of the correct shape.
+    tmp = np.zeros((global_grid.num_levels, global_grid.num_lat_points,
+                    global_grid.num_lon_points))
+    new_data = np.ma.array(tmp, mask=np.ones_like(tmp))
+
+    # Drop obs data into new grid at correct location
+    def find_nearest_index(array, value):
+        return (np.abs(array - value)).argmin()
+    lat_min_idx = find_nearest_index(global_grid.y_t[:, 0], obs_grid.y_t[0, 0])
+    lat_max_idx = find_nearest_index(global_grid.y_t[:, 0], obs_grid.y_t[-1, 0])
+    new_data[:, lat_min_idx:lat_max_idx+1, :] = var[:]
+
+    # Fill in missing values on each level with nearest neighbour
+    for l in range(var.shape[0]):
+        ind = nd.distance_transform_edt(new_data[l, :, :].mask,
+                                        return_distances=False,
+                                        return_indices=True)
+        tmp = new_data[l, :, :]
+        tmp = tmp[tuple(ind)]
+        new_data[l, :, :] = tmp[:, :]
+
+    return new_data
+
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -72,72 +147,62 @@ def main():
                         help='Name of the obs latitude variable')
     parser.add_argument('--z_var', default='level',
                         help='Name of the obs vertical variable')
-
+    parser.add_argument('--use_esmf', default=False,
+                        help='Do regridding with ESMF, otherwise use basemap.')
     args = parser.parse_args()
 
+    # Destination grid
     title = 'MOM tripolar t-cell grid'
     mom_grid = MomGrid(args.ocean_hgrid, args.ocean_vgrid, args.ocean_mask, title)
-    mom_scrip_file = 'model_scrip.nc'
-    mom_grid.write_scrip(mom_scrip_file, ' '.join(sys.argv))
-    # Dest grid in scrip format.
-    dest_grid = ESMF.Grid(filename=mom_scrip_file,
-                            filetype=ESMF.FileFormat.SCRIP)
 
     # Read in obs file.
     with nc.Dataset(args.temp_obs_file) as obs:
         temp = obs.variables[args.temp_var][args.time_index, :]
-        xt = obs.variables[args.x_var][:]
-        yt = obs.variables[args.y_var][:]
+        lons = obs.variables[args.x_var][:]
+        lats = obs.variables[args.y_var][:]
         z = obs.variables[args.z_var][:]
 
-    # Source grid in scrip format.
-    title = '{}x{} Cylindrical Equidistant Projection Grid'.format(len(xt), len(yt))
-    obs_grid = Grid(xt, yt, z, temp.mask[0, :, :], title)
-    obs_scrip_file = 'obs_scrip.nc'
-    obs_grid.write_scrip(obs_scrip_file, ' '.join(sys.argv))
-
-    src_grid = ESMF.Grid(filename=obs_scrip_file,
-                            filetype=ESMF.FileFormat.SCRIP)
-
-    dest_grid = ESMF.Grid(filename=mom_scrip_file,
-                            filetype=ESMF.FileFormat.SCRIP)
-
-    #dest_grid = ESMF.Grid(filename=mom_scrip_file,
-    #                        filetype=ESMF.FileFormat.SCRIP)
-
-    # Create temp and salinity source fields.
-    temp_src = ESMF.Field(src_grid, 'temp_src',
-                            staggerloc=ESMF.StaggerLoc.CENTER)
-    temp_dest = ESMF.Field(dest_grid, 'temp_dest',
-                            staggerloc=ESMF.StaggerLoc.CENTER)
-
-    temp_dest.data[:] = 1e20
-    print('HERE 1')
-    import pdb
-    pdb.set_trace()
-
-    # Create an object to regrid data 
-    regrid = ESMF.Regrid(temp_src, temp_dest,
-			 #regrid_method=ESMF.RegridMethod.BILINEAR,
-			 regrid_method=ESMF.RegridMethod.NEAREST_STOD,
-			 unmapped_action=ESMF.UnmappedAction.ERROR)
-    print('HERE 2')
+    # Source grid.
+    title = '{}x{} Cylindrical Equidistant Projection Grid'.format(len(lons), len(lats))
+    obs_grid = Grid(lons, lats, z, temp.mask[0, :, :], title)
 
     # Regrid obs columns onto model vertical grid.
     temp = regrid_columns(temp, z, mom_grid.z, plot_results=True)
-    temp_src.data[:] = temp[0, :, :].transpose()
 
-    print('HERE 3')
-    import pdb
-    pdb.set_trace()
+    # Source-like grid but extended to the whole globe.
+    num_lat_points = 180.0 / abs(lats[1] - lats[0])
+    num_lon_points = 360.0 / abs(lons[1] - lons[0])
+    title = '{}x{} Equidistant Lat Lon Grid'
+    mask = np.zeros((num_lat_points, num_lon_points))
+    global_grid = LatLonGrid(num_lon_points, num_lat_points, mom_grid.z,
+                              mask, title)
+    # Now extend obs to cover whole globe
+    gtemp = extend_obs(obs_grid, global_grid, temp)
 
-    # Do the regridding
-    temp_dest = regrid(temp_src, temp_dest)
+    if args.use_esmf:
+        import ESMF
+        esmf_regrid(obs_grid, mom_grid, temp)
+    else:
+        import mpl_toolkits
+        from mpl_toolkits.basemap import Basemap
 
-    print('HERE 4')
+        # Move lons from -280 to 80 to 0 to 360 for interpolation step.
+        # Use basemap shift grid.
+        x_t = np.copy(mom_grid.x_t)
+        x_t[mom_grid.x_t < 0] = mom_grid.x_t[mom_grid.x_t < 0] + 360
 
-    import pdb
-    pdb.set_trace()
+        # Bilinear interpolation
+        temp_bi = mpl_toolkits.basemap.interp(gtemp[0,:,:],
+                                              global_grid.x_t[0, :],
+                                              global_grid.y_t[:, 0],
+                                              x_t, mom_grid.y_t, order=1)
+
+        # Apply ocean mask.
+        temp = np.ma.array(temp_bi, mask=mom_grid.mask)
+
+        import pdb
+        pdb.set_trace()
+
 
 if __name__ == '__main__':
     sys.exit(main())
