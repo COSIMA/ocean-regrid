@@ -124,6 +124,7 @@ def main():
     # Read in temperature obs file.
     with nc.Dataset(args.temp_obs_file) as obs:
         temp = obs.variables[args.temp_var][args.time_index, :]
+        temp_units = obs.variables[args.temp_var].units
         lons = obs.variables[args.x_var][:]
         lats = obs.variables[args.y_var][:]
         z = obs.variables[args.z_var][:]
@@ -131,6 +132,7 @@ def main():
     # Read in salinity obs file.
     with nc.Dataset(args.salt_obs_file) as obs:
         salt = obs.variables[args.salt_var][args.time_index, :]
+        salt_units = obs.variables[args.salt_var].units
         tmp = obs.variables[args.x_var][:]
         assert np.array_equal(lons, tmp)
         tmp = obs.variables[args.y_var][:]
@@ -185,6 +187,10 @@ def main():
         mask = np.stack([model_grid.mask] * model_grid.num_levels)
         temp = np.ma.array(mtemp, mask=mask)
         salt = np.ma.array(msalt, mask=mask)
+
+    # Convert salt from kg/kg to g/kg
+    if salt_units == 'kg/kg':
+        salt *= 1000.0
 
     print('Writing out')
     if args.model == 'MOM':

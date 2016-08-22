@@ -1,0 +1,7 @@
+*.pyc
+
+MOM_grid
+NEMO_grid
+ics
+reanalyses
+
