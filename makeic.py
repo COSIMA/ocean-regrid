@@ -92,6 +92,8 @@ def main():
     parser.add_argument('ocean_mask', help='Ocean land-sea mask file.')
     parser.add_argument('temp_obs_file', help='Temp from GODAS obs reanalysis.')
     parser.add_argument('salt_obs_file', help='Salt from GODAS obs reanalysis.')
+    parser.add_argument('--model', default='MOM',
+                        help='Which model to create IC for, can be MOM or NEMO.')
     parser.add_argument('--output', default='ocean_ic.nc',
                         help='Name of the output file.')
     parser.add_argument('--temp_var', default='temp',
@@ -110,9 +112,15 @@ def main():
                         help='Do regridding with ESMF, otherwise use basemap.')
     args = parser.parse_args()
 
+    assert args.model == 'MOM' or args.model == 'NEMO'
+
     # Destination grid
-    title = 'MOM tripolar t-cell grid'
-    ocean_grid = MomGrid(args.ocean_hgrid, args.ocean_vgrid, args.ocean_mask, title)
+    if args.model == 'MOM':
+        title = 'MOM tripolar t-cell grid'
+        model_grid = MomGrid(args.ocean_hgrid, args.ocean_vgrid, args.ocean_mask, title)
+    else:
+        title = 'NEMO tripolar t-cell grid'
+        model_grid = NemoGrid(args.ocean_hgrid, args.ocean_vgrid, args.ocean_mask, title)
 
     # Read in temperature obs file.
     with nc.Dataset(args.temp_obs_file) as obs:
@@ -137,15 +145,15 @@ def main():
 
     # Regrid obs columns onto model vertical grid.
     print('Vertical regridding/extrapolation ...')
-    temp = regrid_columns(temp, z, ocean_grid.z)
-    salt = regrid_columns(salt, z, ocean_grid.z)
+    temp = regrid_columns(temp, z, model_grid.z)
+    salt = regrid_columns(salt, z, model_grid.z)
 
     # Source-like grid but extended to the whole globe.
     num_lat_points = int(180.0 / abs(lats[1] - lats[0]))
     num_lon_points = int(360.0 / abs(lons[1] - lons[0]))
     title = '{}x{} Equidistant Lat Lon Grid'
     mask = np.zeros((num_lat_points, num_lon_points))
-    global_grid = LatLonGrid(num_lon_points, num_lat_points, ocean_grid.z,
+    global_grid = LatLonGrid(num_lon_points, num_lat_points, model_grid.z,
                               mask, title)
     # Now extend obs to cover whole globe
     print('Extending obs to global domain ...')
@@ -154,15 +162,15 @@ def main():
 
     # Move lons from -280 to 80 to 0 to 360 for interpolation step.
     # FIXME: use basemap shift grid.
-    x_t = np.copy(ocean_grid.x_t)
-    x_t[ocean_grid.x_t < 0] = ocean_grid.x_t[ocean_grid.x_t < 0] + 360
+    x_t = np.copy(model_grid.x_t)
+    x_t[model_grid.x_t < 0] = model_grid.x_t[model_grid.x_t < 0] + 360
 
     # Bilinear interpolation over all levels.
     print('Regridding to model grid')
-    mtemp = np.ndarray((ocean_grid.num_levels, ocean_grid.num_lat_points,
-                      ocean_grid.num_lon_points))
-    msalt = np.ndarray((ocean_grid.num_levels, ocean_grid.num_lat_points,
-                      ocean_grid.num_lon_points))
+    mtemp = np.ndarray((model_grid.num_levels, model_grid.num_lat_points,
+                      model_grid.num_lon_points))
+    msalt = np.ndarray((model_grid.num_levels, model_grid.num_lat_points,
+                      model_grid.num_lon_points))
     for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
         for l in range(gtemp.shape[0]):
             print('.', end='')
@@ -170,17 +178,17 @@ def main():
             dest[l, :, :] = mpl_toolkits.basemap.interp(src[l,:,:],
                                                         global_grid.x_t[0, :],
                                                         global_grid.y_t[:, 0],
-                                                        x_t, ocean_grid.y_t,
+                                                        x_t, model_grid.y_t,
                                                         order=1)
     print('')
     # Apply ocean mask.
-    mask = np.stack([ocean_grid.mask] * ocean_grid.num_levels)
+    mask = np.stack([model_grid.mask] * model_grid.num_levels)
     temp = np.ma.array(mtemp, mask=mask)
     salt = np.ma.array(msalt, mask=mask)
 
     print('Writing out')
-    write_mom_ic(ocean_grid, temp, salt, args.output, ''.join(sys.argv))
-    write_nemo_ic(ocean_grid, temp, salt, args.output, ''.join(sys.argv))
+    write_mom_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
+    write_nemo_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
 
 if __name__ == '__main__':
     sys.exit(main())
