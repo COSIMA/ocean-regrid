@@ -29,3 +29,8 @@ $ ./makeic.py --temp_var pottmp ocean_hgrid.nc ocean_vgrid.nc ocean_mask.nc pott
 
 To use the created IC the ocean model needs to be able to start from rest.
 
+# Example output
+
+![MOM IC based on GODAS reanalysis](https://raw.github.com/nicholash/ocean-ic/master/examples/MOM_IC_GODAS.png)
+
+Notice the unusual lines at high latitude. This occurs because the GODAS temperature dataset is limited to 65 deg N, beyond that nearest neighbour values are being used.
