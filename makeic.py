@@ -18,6 +18,7 @@ from latlon_grid import LatLonGrid
 from util import write_mom_ic, write_nemo_ic
 
 """
+Create ocean model IC based on reanalysis data.
 """
 
 def regrid_columns(data, src_z, dest_z):

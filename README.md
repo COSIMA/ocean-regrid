@@ -27,5 +27,5 @@ $ ./makeic.py --temp_var pottmp ocean_hgrid.nc ocean_vgrid.nc ocean_mask.nc pott
 
 # Limitations
 
-The ocean model needs to be able to start from rest.
+To use the created IC the ocean model needs to be able to start from rest.
 
