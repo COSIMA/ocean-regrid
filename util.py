@@ -52,5 +52,32 @@ def write_mom_ic(ocean_grid, temp_data, salt_data, filename, history):
 
     f.close()
 
-def write_nemo_ic(ocean_grid, temp, salt, filename, history):
-    pass
+def write_nemo_ic(ocean_grid, temp_data, salt_data, filename, history):
+
+    f = nc.Dataset(filename, 'w')
+
+    f.createDimension('y', ocean_grid.num_lat_points)
+    f.createDimension('x', ocean_grid.num_lon_points)
+    f.createDimension('z', ocean_grid.num_levels)
+    f.createDimension('time_counter')
+
+    lats = f.createVariable('nav_lat', 'f8', ('y', 'x'))
+    lats[:] = ocean_grid.y_t[:]
+
+    lons = f.createVariable('nav_lon', 'f8', ('y', 'x'))
+    lons[:] = ocean_grid.x_t[:]
+
+    depth = f.createVariable('depth', 'f8', ('z'))
+    depth[:] = ocean_grid.z[:]
+
+    time = f.createVariable('time_counter', 'f8', ('time_counter'))
+    time[:] = 0
+
+    temp = f.createVariable('votemper', 'f8', ('time_counter', 'z', 'y', 'x'))
+    temp[0, :] = temp_data[:]
+
+    salt = f.createVariable('vosaline', 'f8', ('time_counter', 'z', 'y', 'x'))
+    salt[0, :] = salt_data[:]
+
+    f.close()
+

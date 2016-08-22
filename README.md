@@ -12,7 +12,12 @@ The horizontal and vertical model grid definitions as well as the land-sea mask 
 
 Example command creating a MOM initial condition from GODAS reanalysis.
 ```
-$ ./makeic.py --temp_var pottmp ocean_hgrid.nc ocean_vgrid.nc ocean_mask.nc pottmp.2016.nc pottmp.2016.nc --output mom_ic.nc
+$ ./makeic.py --temp_var pottmp --salt_var salt --ocean_mask ocean_mask.nc ocean_hgrid.nc ocean_vgrid.nc pottmp.2016.nc salt.2016.nc
+```
+
+Creating NEMO initial condition from GODAS:
+```
+$ ./makeic.py --temp_var pottmp --salt_var salt --model NEMO coordinates.nc data_1m_potential_temperature_nomask.nc pottmp.2016.nc salt.2016.nc
 ```
 
 # How it works

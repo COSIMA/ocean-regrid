@@ -13,6 +13,7 @@ import mpl_toolkits
 from mpl_toolkits.basemap import Basemap
 
 from mom_grid import MomGrid
+from nemo_grid import NemoGrid
 from grid import Grid
 from latlon_grid import LatLonGrid
 from util import write_mom_ic, write_nemo_ic
@@ -89,9 +90,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('ocean_hgrid', help='Ocean horizontal grid spec file.')
     parser.add_argument('ocean_vgrid', help='Ocean vertical grid spec file.')
-    parser.add_argument('ocean_mask', help='Ocean land-sea mask file.')
     parser.add_argument('temp_obs_file', help='Temp from GODAS obs reanalysis.')
     parser.add_argument('salt_obs_file', help='Salt from GODAS obs reanalysis.')
+    parser.add_argument('--ocean_mask', default=None, help='Ocean land-sea mask file.')
     parser.add_argument('--model', default='MOM',
                         help='Which model to create IC for, can be MOM or NEMO.')
     parser.add_argument('--output', default='ocean_ic.nc',
@@ -108,8 +109,6 @@ def main():
                         help='Name of the obs latitude variable')
     parser.add_argument('--z_var', default='level',
                         help='Name of the obs vertical variable')
-    parser.add_argument('--use_esmf', default=False,
-                        help='Do regridding with ESMF, otherwise use basemap.')
     args = parser.parse_args()
 
     assert args.model == 'MOM' or args.model == 'NEMO'
@@ -182,13 +181,16 @@ def main():
                                                         order=1)
     print('')
     # Apply ocean mask.
-    mask = np.stack([model_grid.mask] * model_grid.num_levels)
-    temp = np.ma.array(mtemp, mask=mask)
-    salt = np.ma.array(msalt, mask=mask)
+    if mask is not None:
+        mask = np.stack([model_grid.mask] * model_grid.num_levels)
+        temp = np.ma.array(mtemp, mask=mask)
+        salt = np.ma.array(msalt, mask=mask)
 
     print('Writing out')
-    write_mom_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
-    write_nemo_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
+    if args.model == 'MOM':
+        write_mom_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
+    if args.model == 'NEMO':
+        write_nemo_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
 
 if __name__ == '__main__':
     sys.exit(main())
