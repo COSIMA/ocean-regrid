@@ -173,10 +173,9 @@ def main():
                                                         order=1)
     print('')
     # Apply ocean mask.
-    #temp = np.ma.array(mtemp, mask=ocean_grid.mask)
-    #salt = np.ma.array(msalt, mask=ocean_grid.mask)
-    temp = mtemp
-    salt = mtemp
+    mask = np.stack([ocean_grid.mask] * ocean_grid.num_levels)
+    temp = np.ma.array(mtemp, mask=mask)
+    salt = np.ma.array(msalt, mask=mask)
 
     print('Writing out')
     write_mom_ic(ocean_grid, temp, salt, args.output, ''.join(sys.argv))
