@@ -20,7 +20,8 @@ class MomGrid(Grid):
             self.y_vt = f.variables['y'][:]
 
         with nc.Dataset(v_grid_def) as f:
-            z = f.variables['zeta'][:]
+            # Only take cell centres.
+            z = f.variables['zeta'][1::2]
 
         with nc.Dataset(mask_file) as f:
             mask = np.zeros_like(f.variables['mask'], dtype=bool)

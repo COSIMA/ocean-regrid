@@ -15,11 +15,12 @@ from mpl_toolkits.basemap import Basemap
 from mom_grid import MomGrid
 from grid import Grid
 from latlon_grid import LatLonGrid
+from util import write_mom_ic, write_nemo_ic
 
 """
 """
 
-def regrid_columns(data, src_z, dest_z, plot_results=False):
+def regrid_columns(data, src_z, dest_z):
     """
     Regrid vertical columns of data from src_z to dest_z.
     """
@@ -110,48 +111,76 @@ def main():
 
     # Destination grid
     title = 'MOM tripolar t-cell grid'
-    mom_grid = MomGrid(args.ocean_hgrid, args.ocean_vgrid, args.ocean_mask, title)
+    ocean_grid = MomGrid(args.ocean_hgrid, args.ocean_vgrid, args.ocean_mask, title)
 
-    # Read in obs file.
+    # Read in temperature obs file.
     with nc.Dataset(args.temp_obs_file) as obs:
         temp = obs.variables[args.temp_var][args.time_index, :]
         lons = obs.variables[args.x_var][:]
         lats = obs.variables[args.y_var][:]
         z = obs.variables[args.z_var][:]
 
+    # Read in salinity obs file.
+    with nc.Dataset(args.salt_obs_file) as obs:
+        salt = obs.variables[args.salt_var][args.time_index, :]
+        tmp = obs.variables[args.x_var][:]
+        assert np.array_equal(lons, tmp)
+        tmp = obs.variables[args.y_var][:]
+        assert np.array_equal(lats, tmp)
+        tmp = obs.variables[args.z_var][:]
+        assert np.array_equal(z, tmp)
+
     # Source grid.
     title = '{}x{} Cylindrical Equidistant Projection Grid'.format(len(lons), len(lats))
     obs_grid = Grid(lons, lats, z, temp.mask[0, :, :], title)
 
     # Regrid obs columns onto model vertical grid.
-    temp = regrid_columns(temp, z, mom_grid.z, plot_results=True)
+    print('Vertical regridding/extrapolation ...')
+    temp = regrid_columns(temp, z, ocean_grid.z)
+    salt = regrid_columns(salt, z, ocean_grid.z)
 
     # Source-like grid but extended to the whole globe.
-    num_lat_points = 180.0 / abs(lats[1] - lats[0])
-    num_lon_points = 360.0 / abs(lons[1] - lons[0])
+    num_lat_points = int(180.0 / abs(lats[1] - lats[0]))
+    num_lon_points = int(360.0 / abs(lons[1] - lons[0]))
     title = '{}x{} Equidistant Lat Lon Grid'
     mask = np.zeros((num_lat_points, num_lon_points))
-    global_grid = LatLonGrid(num_lon_points, num_lat_points, mom_grid.z,
+    global_grid = LatLonGrid(num_lon_points, num_lat_points, ocean_grid.z,
                               mask, title)
     # Now extend obs to cover whole globe
+    print('Extending obs to global domain ...')
     gtemp = extend_obs(obs_grid, global_grid, temp)
+    gsalt = extend_obs(obs_grid, global_grid, salt)
 
     # Move lons from -280 to 80 to 0 to 360 for interpolation step.
-    # Use basemap shift grid.
-    x_t = np.copy(mom_grid.x_t)
-    x_t[mom_grid.x_t < 0] = mom_grid.x_t[mom_grid.x_t < 0] + 360
+    # FIXME: use basemap shift grid.
+    x_t = np.copy(ocean_grid.x_t)
+    x_t[ocean_grid.x_t < 0] = ocean_grid.x_t[ocean_grid.x_t < 0] + 360
 
-    # Bilinear interpolation
-    temp_bi = mpl_toolkits.basemap.interp(gtemp[0,:,:],
-                                          global_grid.x_t[0, :],
-                                          global_grid.y_t[:, 0],
-                                          x_t, mom_grid.y_t, order=1)
+    # Bilinear interpolation over all levels.
+    print('Regridding to model grid')
+    mtemp = np.ndarray((ocean_grid.num_levels, ocean_grid.num_lat_points,
+                      ocean_grid.num_lon_points))
+    msalt = np.ndarray((ocean_grid.num_levels, ocean_grid.num_lat_points,
+                      ocean_grid.num_lon_points))
+    for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
+        for l in range(gtemp.shape[0]):
+            print('.', end='')
+            sys.stdout.flush()
+            dest[l, :, :] = mpl_toolkits.basemap.interp(src[l,:,:],
+                                                        global_grid.x_t[0, :],
+                                                        global_grid.y_t[:, 0],
+                                                        x_t, ocean_grid.y_t,
+                                                        order=1)
+    print('')
     # Apply ocean mask.
-    temp = np.ma.array(temp_bi, mask=mom_grid.mask)
+    #temp = np.ma.array(mtemp, mask=ocean_grid.mask)
+    #salt = np.ma.array(msalt, mask=ocean_grid.mask)
+    temp = mtemp
+    salt = mtemp
 
-    import pdb
-    pdb.set_trace()
-
+    print('Writing out')
+    write_mom_ic(ocean_grid, temp, salt, args.output, ''.join(sys.argv))
+    write_nemo_ic(ocean_grid, temp, salt, args.output, ''.join(sys.argv))
 
 if __name__ == '__main__':
     sys.exit(main())
