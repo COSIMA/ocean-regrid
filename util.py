@@ -1,83 +1,46 @@
 
-import netCDF4 as nc
-from mom_grid import MomGrid
+import numpy as np
 
-def write_mom_ic(ocean_grid, temp_data, salt_data, filename, history):
+def normalise_lons(lons, data=None):
+    """
+    Normalise longitudes to 0-360 deg. Perform the same transformation on data.
+    """
 
-    f = nc.Dataset(filename, 'w')
+    # Remove -ves
+    new_lons = np.copy(lons)
+    new_lons[lons < 0] = lons[lons < 0] + 360
+    lons_copy = np.copy(new_lons)
 
-    f.createDimension('GRID_Y_T', ocean_grid.num_lat_points)
-    f.createDimension('GRID_X_T', ocean_grid.num_lon_points)
-    f.createDimension('ZT', ocean_grid.num_levels)
+    if data is not None:
+        new_data = np.copy(data)
+    else:
+        new_data = None
 
-    lats = f.createVariable('GRID_Y_T', 'f8', ('GRID_Y_T'))
-    lats.long_name = 'Nominal Latitude of T-cell center'
-    lats.units = 'degree_north'
-    lats.point_spacing = 'uneven'
-    lats.axis = 'Y'
-    # FIXME
-    lats[:] = ocean_grid.y_t[:, 0]
+    # Use changes in 2nd derivative to find jumps. Then offset (the +2) to get
+    # element directly after jump. It just works OK.
+    jumps = list(np.where(np.diff(new_lons[0, :], 2))[0][::2] + 2)
 
-    lons = f.createVariable('GRID_X_T', 'f8', ('GRID_X_T'))
-    lons.long_name = 'Nominal Longitude of T-cell center'
-    lons.units = 'degree_east'
-    lons.modulo = 360.
-    lons.point_spacing = 'even'
-    lons.axis = 'X'
-    # FIXME
-    lons[:] = ocean_grid.x_t[0, :]
+    # Beginning and sizes of continuous segments of lons.
+    segs = [0] + jumps
+    sizes = np.diff(segs + [len(new_lons[0, :])])
 
-    zt = f.createVariable('ZT', 'f8', ('ZT'))
-    zt.long_name = 'zt'
-    zt.units = 'meters'
-    zt.positive = 'downdown'
-    zt.point_spacing = 'uneven'
-    zt.axis = 'Z'
-    # FIXME
-    zt[:] = ocean_grid.z[:]
+    # Sort according to value of lon at segment begin index.
+    segs = zip(new_lons[0, segs], segs, sizes)
+    src_segs = sorted(segs, key=lambda x : x[0])
 
-    temp = f.createVariable('temp', 'f8', ('ZT', 'GRID_Y_T', 'GRID_X_T'), fill_value=-1.e+34)
-    temp.missing_value = -1.e+34
-    temp.long_name = "Temperature"
-    temp.units = "deg C"
-    temp.history = history
-    temp[:] = temp_data[:]
+    dest_idx = 0
+    for i, (_, src_idx, size) in enumerate(src_segs):
+        new_lons[:, dest_idx:dest_idx+size] = lons_copy[:, src_idx:src_idx+size]
 
-    salt = f.createVariable('salt', 'f8', ('ZT', 'GRID_Y_T', 'GRID_X_T'), fill_value=-1.e+34)
-    salt.missing_value = -1.e+34
-    salt.long_name = "Salinity"
-    salt.units = "psu"
-    salt.history = history
-    salt[:] = salt_data[:]
+        if new_data is not None:
+            if len(data.shape) == 3:
+                new_data[:, :, dest_idx:dest_idx+size] = data[:, :, src_idx:src_idx+size]
+            else:
+                new_data[:, dest_idx:dest_idx+size] = data[:, src_idx:src_idx+size]
 
-    f.close()
+        dest_idx += size
 
-def write_nemo_ic(ocean_grid, temp_data, salt_data, filename, history):
+        if i+1 == len(segs):
+            break
 
-    f = nc.Dataset(filename, 'w')
-
-    f.createDimension('y', ocean_grid.num_lat_points)
-    f.createDimension('x', ocean_grid.num_lon_points)
-    f.createDimension('z', ocean_grid.num_levels)
-    f.createDimension('time_counter')
-
-    lats = f.createVariable('nav_lat', 'f8', ('y', 'x'))
-    lats[:] = ocean_grid.y_t[:]
-
-    lons = f.createVariable('nav_lon', 'f8', ('y', 'x'))
-    lons[:] = ocean_grid.x_t[:]
-
-    depth = f.createVariable('depth', 'f8', ('z'))
-    depth[:] = ocean_grid.z[:]
-
-    time = f.createVariable('time_counter', 'f8', ('time_counter'))
-    time[:] = 0
-
-    temp = f.createVariable('votemper', 'f8', ('time_counter', 'z', 'y', 'x'))
-    temp[0, :] = temp_data[:]
-
-    salt = f.createVariable('vosaline', 'f8', ('time_counter', 'z', 'y', 'x'))
-    salt[0, :] = salt_data[:]
-
-    f.close()
-
+    return new_lons, new_data

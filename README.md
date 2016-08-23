@@ -1,6 +1,6 @@
 # ocean-ic
 
-Create MOM and NEMO 'cold start' (temperature and salinity) initial conditions from global reanalysis.
+Create MOM and NEMO 'cold start' (temperature and salinity) initial conditions from either GODAS or ORAS4 reanalysis.
 
 # Use
 
@@ -20,11 +20,16 @@ Creating NEMO initial condition from GODAS:
 $ ./makeic.py --temp_var pottmp --salt_var salt --model NEMO coordinates.nc data_1m_potential_temperature_nomask.nc pottmp.2016.nc salt.2016.nc
 ```
 
+Creating MOM initial conditions from ORAS4:
+```
+$ ./makeic.py --model_name MOM --obs_grid coords_T.nc --model_mask ocean_mask.nc ocean_hgrid.nc ocean_vgrid.nc thetao_oras4_1m_2014_grid_T.nc so_oras4_1m_2014_grid_T.nc --output mom_oras4_ic.nc
+```
+
 # How it works
 
 1. The reanalysis/obs dataset is regridded in the vertical to have the same depth and levels as the model grid. Linear interpolation is used for this. If the model is deeper than the obs then the deepest value is extended.
 
-2. Since the obs dataset is often limited latitudinally it is extended to cover the whole globe. This is done based on nearest neighbours.
+2. In the case of GODAS since the obs dataset is limited latitudinally it is extended to cover the whole globe. This is done based on nearest neighbours.
 
 3. The obs dataset is then regridded onto the model grid using bilinear interpolation.
 
@@ -32,7 +37,9 @@ $ ./makeic.py --temp_var pottmp --salt_var salt --model NEMO coordinates.nc data
 
 # Limitations
 
-To use the created IC the ocean model needs to be able to start from rest.
+* Because the IC only includes salt and temperature the ocean model needs to be able to start from rest.
+* When using GODAS reanalysis the values at high latitudes are unphysical due to limited observations.
+* WARNING: presently the final interpolation assumes that the obs/reanalysis grid is a regular lat-lon grid, this is not the case for ORAS4.
 
 # Example output
 

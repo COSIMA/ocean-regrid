@@ -4,14 +4,11 @@ from __future__ import print_function
 
 import numpy as np
 import netCDF4 as nc
+import exceptions
 
 class Grid(object):
 
-    def __init__(self, lons, lats, levels, mask, description):
-
-        self.num_lat_points = len(lats)
-        self.num_lon_points = len(lons)
-        self.num_levels = len(levels)
+    def __init__(self, lons, lats, levels, mask, description=''):
 
         if len(lons.shape) == 1:
             # We expect this to be a regular grid.
@@ -23,9 +20,20 @@ class Grid(object):
             self.x_t = np.tile(lons, (self.num_lat_points, 1))
             self.y_t = np.tile(lats, (self.num_lon_points, 1))
             self.y_t = self.y_t.transpose()
+
+            self.dy = abs(self.y_t[1, 0] - self.y_t[0, 0])
+            self.dx = abs(self.x_t[0, 1] - self.x_t[0, 0])
         else:
+            # There is not constant dx, dy.
+            self.dy = None
+            self.dx = None
+
             self.x_t = lons
             self.y_t = lats
+
+        self.num_lat_points = lats.shape[0]
+        self.num_lon_points = lats.shape[1]
+        self.num_levels = len(levels)
 
         self.z = levels
         self.description = description
@@ -39,34 +47,34 @@ class Grid(object):
 	x = self.x_t
 	y = self.y_t
 
-        dx = (x[0][1] - x[0][0]) / 2.0
-        dy = (y[1][0] - y[0][0]) / 2.0
+        dx_half = self.dx / 2.0
+        dy_half = self.dy / 2.0
 
         # Set grid corners, we do these one corner at a time. Start at the 
         # bottom left and go anti-clockwise. This is the SCRIP convention.
         clon = np.empty((self.num_lat_points, self.num_lon_points, 4))
         clon[:] = np.NAN
-        clon[:,:,0] = x - dx
-        clon[:,:,1] = x + dx
-        clon[:,:,2] = x + dx
-        clon[:,:,3] = x - dx
+        clon[:,:,0] = x - dx_half
+        clon[:,:,1] = x + dx_half
+        clon[:,:,2] = x + dx_half
+        clon[:,:,3] = x - dx_half
         assert(not np.isnan(np.sum(clon)))
 
         clat = np.empty((self.num_lat_points, self.num_lon_points, 4))
         clat[:] = np.NAN
-        clat[:,:,0] = y - dy
-        clat[:,:,1] = y - dy
-        clat[:,:,2] = y + dy
-        clat[:,:,3] = y + dy
+        clat[:,:,0] = y - dy_half
+        clat[:,:,1] = y - dy_half
+        clat[:,:,2] = y + dy_half
+        clat[:,:,3] = y + dy_half
         assert(not np.isnan(np.sum(clat)))
 
         # The bottom latitude band should always be Southern extent.
-        assert(np.all(clat[0, :, 0] == np.min(y) - dy))
-        assert(np.all(clat[0, :, 1] == np.min(y) - dy))
+        assert(np.all(clat[0, :, 0] == np.min(y) - dy_half))
+        assert(np.all(clat[0, :, 1] == np.min(y) - dy_half))
 
         # The top latitude band should always be Northern extent.
-        assert(np.all(clat[-1, :, 2] == np.max(y) + dy))
-        assert(np.all(clat[-1, :, 3] == np.max(y) + dy))
+        assert(np.all(clat[-1, :, 2] == np.max(y) + dy_half))
+        assert(np.all(clat[-1, :, 3] == np.max(y) + dy_half))
 
         self.clon_t = clon
         self.clat_t = clat
@@ -120,3 +128,5 @@ class Grid(object):
         f.history = history
         f.close()
 
+    def shift_lons(self, lons, data=None):
+        raise exceptions.NotImplementedError
