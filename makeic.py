@@ -243,7 +243,7 @@ def main():
 
         write_mom_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
     else:
-        write_nemo_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
+        write_nemo_ic(model_grid, mtemp, msalt, args.output, ''.join(sys.argv))
 
 if __name__ == '__main__':
     sys.exit(main())
