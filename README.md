@@ -8,16 +8,16 @@ Download a reanalysis dataset, many can be found here:
 
 https://reanalyses.org/ocean/overview-current-reanalyses
 
-The horizontal and vertical model grid definitions as well as the land-sea mask are also needed.
+The horizontal and vertical model grid definitions as well as the land-sea mask are also needed, in the case or ORAS4 this is a separate file, for GODAS it is contained within the data file.
 
 Example command creating a MOM initial condition from GODAS reanalysis.
 ```
-$ ./makeic.py --temp_var pottmp --salt_var salt --ocean_mask ocean_mask.nc ocean_hgrid.nc ocean_vgrid.nc pottmp.2016.nc salt.2016.nc
+$ ./makeic.py --obs_name GODAS --model_mask ocean_mask.nc ocean_hgrid.nc ocean_vgrid.nc pottmp.2016.nc salt.2016.nc
 ```
 
 Creating NEMO initial condition from GODAS:
 ```
-$ ./makeic.py --temp_var pottmp --salt_var salt --model NEMO coordinates.nc data_1m_potential_temperature_nomask.nc pottmp.2016.nc salt.2016.nc
+$ ./makeic.py --model_name NEMO --obs_name GODAS coordinates.nc data_1m_potential_temperature_nomask.nc pottmp.2016.nc salt.2016.nc
 ```
 
 Creating MOM initial conditions from ORAS4:

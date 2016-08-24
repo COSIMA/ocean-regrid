@@ -17,6 +17,6 @@ class GodasGrid(Grid):
             x_t = f.variables['lon'][:]
             y_t = f.variables['lat'][:]
             z = f.variables['level'][:]
-            mask = f.variables['temp'].mask[:]
+            mask = f.variables['pottmp'][0, :].mask[:]
 
         super(GodasGrid, self).__init__(x_t, y_t, z, mask, description)

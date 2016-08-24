@@ -24,6 +24,8 @@ from util import normalise_lons
 Create ocean model IC based on reanalysis data.
 """
 
+GODAS_BERING_STRAIGHT = [416, 184]
+
 def find_nearest_index(array, value):
     return (np.abs(array - value)).argmin()
 
@@ -45,9 +47,9 @@ def regrid_columns(data, src_grid, dest_grid):
     # Iterate through columns and regrid each.
     for lat in range(data.shape[1]):
         for lon in range(data.shape[2]):
-            if all(src_grid.mask[:, lat, lon]):
+            if np.all(src_grid.mask[:, lat, lon]):
                 continue
-            if any(src_grid.mask[:, lat, lon]):
+            if np.any(src_grid.mask[:, lat, lon]):
                 # Masked values expected to be at depth. Find these and fill
                 # with nearest neighbour.
                 for d in range(data.shape[0]-2, 0, -1):
@@ -57,6 +59,18 @@ def regrid_columns(data, src_grid, dest_grid):
 
             # 1d linear interpolation/extrapolation
             new_data[:, lat, lon] = interp(dest_grid.z, src_grid.z, data[:, lat, lon])
+
+    # In the case of GODAS, there is no data past 65N and nearest neighbour
+    # approach is not ideal mainly because the low salinity of the Baltic gets
+    # propogated into the Arctic. So instead fill the Arctic with a
+    # 'representative value'.
+    if 'GODAS' in src_grid.description:
+        GODAS_ARCTIC_REPRESENTATIVE_VALUE = GODAS_BERING_STRAIGHT
+        arctic_idx = find_nearest_index(dest_grid.y_t[:,0], np.max(src_grid.y_t))
+        new_data[:, arctic_idx:, :] = data[:, GODAS_ARCTIC_REPRESENTATIVE_VALUE[0],
+                                              GODAS_ARCTIC_REPRESENTATIVE_VALUE[1]]
+        import pdb
+        pdb.set_trace()
 
     return new_data
 
@@ -130,18 +144,18 @@ def main():
 
     # Source grid
     if args.obs_name == 'ORAS4':
-        obs_grid = OrasGrid(args.obs_grid)
+        obs_grid = OrasGrid(args.obs_grid, description='ORAS4')
     else:
-        obs_grid = GodasGrid(args.temp_obs_file)
+        obs_grid = GodasGrid(args.temp_obs_file, description='GODAS')
 
     # Source-like grids but extended to the whole globe, including maximum
     # depth. The reanalysis grids have limited domain and/or depth.
     if args.obs_name == 'ORAS4':
-        global_grid = TripolarGrid(obs_grid, model_grid.z)
+        global_grid = TripolarGrid(obs_grid, model_grid.z, description='ORAS4')
     else:
         num_lat_points = int(180.0 / obs_grid.dy)
         num_lon_points = int(360.0 / obs_grid.dx)
-        description = '{}x{} Equidistant Lat Lon Grid'
+        description = 'GODAS Equidistant Lat Lon Grid'
         global_grid = RegularGrid(num_lon_points, num_lat_points, model_grid.z,
                                   description=description)
 
@@ -150,7 +164,7 @@ def main():
         temp_var = 'thetao'
         salt_var = 'so'
     else:
-        temp_var = 'temp'
+        temp_var = 'pottmp'
         salt_var = 'salt'
 
     with nc.Dataset(args.temp_obs_file) as obs:
@@ -192,8 +206,8 @@ def main():
             print('.', end='')
             sys.stdout.flush()
             dest[l, :, :] = basemap.interp(src[l,:,:],
-                                           glons[0, :],
-                                           global_grid.y_t[:, 0],
+                                           glons[150, :],
+                                           global_grid.y_t[:, 150],
                                            mlons, model_grid.y_t,
                                            order=1)
     print('')

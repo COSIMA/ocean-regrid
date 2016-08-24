@@ -17,8 +17,8 @@ class Grid(object):
             assert np.allclose(np.diff(lats),
                      np.array([lats[1] - lats[0]]*(len(lats)-1)), atol=1e-4)
             # Turn into tiled
-            self.x_t = np.tile(lons, (self.num_lat_points, 1))
-            self.y_t = np.tile(lats, (self.num_lon_points, 1))
+            self.x_t = np.tile(lons, (lats.shape[0], 1))
+            self.y_t = np.tile(lats, (lons.shape[0], 1))
             self.y_t = self.y_t.transpose()
 
             self.dy = abs(self.y_t[1, 0] - self.y_t[0, 0])
@@ -31,8 +31,8 @@ class Grid(object):
             self.x_t = lons
             self.y_t = lats
 
-        self.num_lat_points = lats.shape[0]
-        self.num_lon_points = lats.shape[1]
+        self.num_lat_points = self.x_t.shape[0]
+        self.num_lon_points = self.x_t.shape[1]
         self.num_levels = len(levels)
 
         self.z = levels
