@@ -37,7 +37,13 @@ class Grid(object):
 
         self.z = levels
         self.description = description
-        self.mask = mask
+
+        if mask is None:
+            # Default is to mask all, up to user to unmask.
+            self.mask = np.ones((self.num_lat_points, self.num_lon_points,
+                                 self.num_levels))
+        else:
+            self.mask = mask
 
         self.clon_t = None
         self.clat_t = None
@@ -127,6 +133,3 @@ class Grid(object):
         f.title = self.description
         f.history = history
         f.close()
-
-    def shift_lons(self, lons, data=None):
-        raise exceptions.NotImplementedError

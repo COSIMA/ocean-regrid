@@ -60,22 +60,10 @@ def regrid_columns(data, src_grid, dest_grid):
             # 1d linear interpolation/extrapolation
             new_data[:, lat, lon] = interp(dest_grid.z, src_grid.z, data[:, lat, lon])
 
-    # In the case of GODAS, there is no data past 65N and nearest neighbour
-    # approach is not ideal mainly because the low salinity of the Baltic gets
-    # propogated into the Arctic. So instead fill the Arctic with a
-    # 'representative value'.
-    if 'GODAS' in src_grid.description:
-        GODAS_ARCTIC_REPRESENTATIVE_VALUE = GODAS_BERING_STRAIGHT
-        arctic_idx = find_nearest_index(dest_grid.y_t[:,0], np.max(src_grid.y_t))
-        new_data[:, arctic_idx:, :] = data[:, GODAS_ARCTIC_REPRESENTATIVE_VALUE[0],
-                                              GODAS_ARCTIC_REPRESENTATIVE_VALUE[1]]
-        import pdb
-        pdb.set_trace()
-
     return new_data
 
 
-def extend_obs(var, obs_grid, global_grid):
+def extend_obs(var, obs_grid, global_grid, arctic_filler=None):
     """
     Use nearest neighbour to extend obs over the whole globe, including land.
     """
@@ -103,6 +91,32 @@ def extend_obs(var, obs_grid, global_grid):
         new_data[l, :, :] = tmp[:, :]
 
     return new_data
+
+
+def fill_arctic(obs_data, global_data, obs_grid, global_grid):
+    """
+    In the case of GODAS, there is no data past 65N and the nearest neighbour
+    approach is not ideal because the low salinity of the Baltic gets
+    propogated into the Arctic. So instead fill the Arctic with a
+    'representative value' taken from the Bering Straight.
+    """
+
+    assert 'GODAS' in obs_grid.description
+
+    GODAS_ARCTIC_REPRESENTATIVE_VALUE = GODAS_BERING_STRAIGHT
+    filler = obs_data[:, GODAS_ARCTIC_REPRESENTATIVE_VALUE[0],
+                         GODAS_ARCTIC_REPRESENTATIVE_VALUE[1]]
+
+    arctic_idx = find_nearest_index(global_grid.y_t[:, 0],
+                                    np.max(obs_grid.y_t[:, 0]))
+    arctic_idx -= 1
+    sh = global_data[:, arctic_idx:, :].shape
+
+    filler = np.stack([filler[:]] * sh[1], axis=1)
+    filler = np.stack([filler[:]] * sh[2], axis=2)
+    global_data[:, arctic_idx:, :] = filler[:]
+
+    return global_data
 
 
 def main():
@@ -168,24 +182,29 @@ def main():
         salt_var = 'salt'
 
     with nc.Dataset(args.temp_obs_file) as obs:
-        temp = obs.variables[temp_var][args.time_index, :]
+        otemp = obs.variables[temp_var][args.time_index, :]
         temp_units = obs.variables[temp_var].units
     with nc.Dataset(args.salt_obs_file) as obs:
-        salt = obs.variables[salt_var][args.time_index, :]
+        osalt = obs.variables[salt_var][args.time_index, :]
         salt_units = obs.variables[salt_var].units
         # Convert salt from kg/kg to g/kg
         if salt_units == 'kg/kg':
-            salt *= 1000.0
+            osalt *= 1000.0
 
     # Regrid obs columns onto model vertical grid.
     print('Vertical regridding/extrapolation ...')
-    temp = regrid_columns(temp, obs_grid, global_grid)
-    salt = regrid_columns(salt, obs_grid, global_grid)
+    otemp = regrid_columns(otemp, obs_grid, global_grid)
+    osalt = regrid_columns(osalt, obs_grid, global_grid)
 
     # Now extend obs to cover whole globe
     print('Extending obs to global domain ...')
-    gtemp = extend_obs(temp, obs_grid, global_grid)
-    gsalt = extend_obs(salt, obs_grid, global_grid)
+    gtemp = extend_obs(otemp, obs_grid, global_grid)
+    gsalt = extend_obs(osalt, obs_grid, global_grid)
+
+    if args.obs_name == 'GODAS':
+        print('Filling Arctic with representational value ...')
+        gtemp = fill_arctic(otemp, gtemp, obs_grid, global_grid)
+        gsalt = fill_arctic(osalt, gsalt, obs_grid, global_grid)
 
     # Move lons and data onto range 0-360
     # FIXME: assert that lats don't need to be shifted as well.
