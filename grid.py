@@ -40,8 +40,9 @@ class Grid(object):
 
         if mask is None:
             # Default is to mask all, up to user to unmask.
-            self.mask = np.ones((self.num_lat_points, self.num_lon_points,
-                                 self.num_levels))
+            self.mask = np.ones((self.num_levels,
+                                 self.num_lat_points, self.num_lon_points),
+                                 dtype='int')
         else:
             self.mask = mask
 
@@ -50,8 +51,8 @@ class Grid(object):
 
     def make_corners(self):
 
-	x = self.x_t
-	y = self.y_t
+        x = self.x_t
+        y = self.y_t
 
         dx_half = self.dx / 2.0
         dy_half = self.dy / 2.0
@@ -85,7 +86,7 @@ class Grid(object):
         self.clon_t = clon
         self.clat_t = clat
 
-    def write_scrip(self, filename, history):
+    def write_scrip(self, filename, history=''):
 
         self.make_corners()
 
@@ -118,7 +119,10 @@ class Grid(object):
         imask.units = 'unitless'
         # Invert the mask. SCRIP uses zero for points that do not
         # participate.
-        imask[:] = np.invert(self.mask[:]).flatten()
+        if len(self.mask.shape) == 2:
+            imask[:] = np.invert(self.mask[:]).flatten()
+        else:
+            imask[:] = np.invert(self.mask[0, :, :]).flatten()
 
         corner_lat = f.createVariable('grid_corner_lat', 'f8',
                                       ('grid_size', 'grid_corners'))

@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import numpy as np
 import netCDF4 as nc
-from mpl_toolkits import basemap
 
 from grid import Grid
 
@@ -21,7 +20,6 @@ class MomGrid(Grid):
             y_t = f.variables['y'][1::2,1::2]
             self.x_vt = f.variables['x'][:]
             self.y_vt = f.variables['y'][:]
-
 
         with nc.Dataset(v_grid_def) as f:
             # Only take cell centres.
@@ -61,24 +59,3 @@ class MomGrid(Grid):
 
         self.clon_t = clon
         self.clat_t = clat
-
-    def shift_lons(self, lons, data=None):
-        """
-        Shift lons and corrosponding data so that they are within range 0, 360
-        """
-
-        assert lons.shape[1] % 360 == 0
-
-        frac = lons.shape[1] / 360
-
-        new_lons = np.zeros_like(lons)
-        new_lons[:, 0:frac*80] = lons[:, frac*280:]
-        new_lons[:, frac*80:] = lons[:, 0:frac*280] + 360.0
-
-        if data is not None:
-            new_data = np.zeros_like(data)
-            new_data[:, :, 0:frac*80] = new_data[:, :, frac*280:]
-            new_data[:, :, frac*80:] = new_data[:, :, 0:frac*280]
-            return new_lons, new_data
-        else:
-            return new_lons, None

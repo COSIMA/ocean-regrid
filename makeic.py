@@ -8,7 +8,6 @@ import numpy as np
 import netCDF4 as nc
 from scipy import interp
 from scipy import ndimage as nd
-from mpl_toolkits import basemap
 
 from mom_grid import MomGrid
 from nemo_grid import NemoGrid
@@ -118,6 +117,19 @@ def fill_arctic(obs_data, global_data, obs_grid, global_grid):
 
     return global_data
 
+def apply_weights(src, dest_shape, n_s, n_b, row, col, s):
+    """
+    """
+
+    dest = np.array(dest_shape).flatten()
+    dest[:] = 0.0
+    src = src.flatten()
+
+    for i in xrange(1, n_s):
+        dest[row[i]-1] = dest[row[i]-1] + s[i]*src[col[i]-1]
+
+    return dest.reshape(dest_shape)
+
 
 def main():
 
@@ -137,11 +149,17 @@ def main():
                         help='Name of the output file.')
     parser.add_argument('--time_index', default=0,
                         help='The time index of the data to use.')
+    parser.add_argument('--regrid_method', default='scipy',
+                        help='The regridding method to use, scipy or esmf.')
+    parser.add_argument('--regrid_weights', default=None,
+                        help='The regridding weights file to use.')
 
     args = parser.parse_args()
 
     assert args.model_name == 'MOM' or args.model_name == 'NEMO'
     assert args.obs_name == 'GODAS' or args.obs_name == 'ORAS4'
+
+    # FIXME: if using esmf check that we have ESMF installed.
 
     if args.obs_name == 'ORAS4' and args.obs_grid is None:
         print('\n Error: --obs_grid must be used for ORAS4 reanalysis\n', file=sys.stderr)
@@ -206,30 +224,70 @@ def main():
         gtemp = fill_arctic(otemp, gtemp, obs_grid, global_grid)
         gsalt = fill_arctic(osalt, gsalt, obs_grid, global_grid)
 
-    # Move lons and data onto range 0-360
-    # FIXME: assert that lats don't need to be shifted as well.
-    mlons, _ = normalise_lons(model_grid.x_t)
-    glons, gtemp = normalise_lons(global_grid.x_t, gtemp)
-    _, gsalt = normalise_lons(global_grid.x_t, gsalt)
-
-    # Bilinear interpolation over all levels.
-    # FIXME: should use sosie or ESMF for this in the case where obs grid is
-    # not rectilinear.
-    print('Regridding to model grid')
+    # Destination arrays    
     mtemp = np.ndarray((model_grid.num_levels, model_grid.num_lat_points,
                       model_grid.num_lon_points))
     msalt = np.ndarray((model_grid.num_levels, model_grid.num_lat_points,
                       model_grid.num_lon_points))
-    for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
-        for l in range(gtemp.shape[0]):
-            print('.', end='')
-            sys.stdout.flush()
-            dest[l, :, :] = basemap.interp(src[l,:,:],
-                                           glons[150, :],
-                                           global_grid.y_t[:, 150],
-                                           mlons, model_grid.y_t,
-                                           order=1)
-    print('')
+
+    # Now apply regridding. We have several options here.
+    if args.regrid_method == 'scipy':
+        from mpl_toolkits import basemap
+
+        # Move lons and data onto range 0-360
+        # FIXME: assert that lats don't need to be shifted as well.
+        mlons, _ = normalise_lons(model_grid.x_t)
+        glons, gtemp = normalise_lons(global_grid.x_t, gtemp)
+        _, gsalt = normalise_lons(global_grid.x_t, gsalt)
+
+        # Bilinear interpolation over all levels.
+        # FIXME: print warning for case where src grid is not rectilinear.
+        print('Regridding to model grid')
+        for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
+            for l in range(gtemp.shape[0]):
+                print('.', end='')
+                sys.stdout.flush()
+                dest[l, :, :] = basemap.interp(src[l,:,:],
+                                               glons[150, :],
+                                               global_grid.y_t[:, 150],
+                                               mlons, model_grid.y_t,
+                                               order=1)
+        print('')
+
+    else:
+        assert args.regrid_method == 'esmf'
+
+        # Write the source and destination grids out in SCRIP format.
+        global_grid.write_scrip('global_grid_scrip.nc')
+        model_grid.write_scrip('model_grid_scrip.nc')
+
+        if not args.regrid_weights:    
+            # Create the remapping weights file.
+            pass
+        else:
+            # Read existing weights.
+            pass
+
+        # Creating the remapping weights files is a computationally intensive
+        # task. For simplicity call external tool for this.
+        #with nc.Dataset(args.regrid_weights) as wf:
+        with nc.Dataset('test.nc') as wf:
+            n_s = wf.dimensions['n_s'].size
+            n_b = wf.dimensions['n_b'].size
+            row = wf.variables['row'][:]
+            col = wf.variables['col'][:]
+            s = wf.variables['S'][:]
+
+        import pdb
+        pdb.set_trace()
+
+        for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
+            for l in range(gtemp.shape[0]):
+                dest[l, :, :] = apply_weights(src[l, :, :], dest.shape[1:],
+                                              n_s, n_b, row, col, s)
+                import pdb
+                pdb.set_trace()
+
 
     print('Writing out')
     if args.model_name == 'MOM':
