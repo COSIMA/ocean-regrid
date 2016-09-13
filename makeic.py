@@ -3,8 +3,11 @@
 from __future__ import print_function
 
 import sys, os
+import time
 import argparse
 import numpy as np
+import numba 
+import subprocess as sp
 import netCDF4 as nc
 from scipy import interp
 from scipy import ndimage as nd
@@ -117,11 +120,13 @@ def fill_arctic(obs_data, global_data, obs_grid, global_grid):
 
     return global_data
 
+@numba.jit
 def apply_weights(src, dest_shape, n_s, n_b, row, col, s):
     """
+    Apply ESMF regirdding weights.
     """
 
-    dest = np.array(dest_shape).flatten()
+    dest = np.ndarray(dest_shape).flatten()
     dest[:] = 0.0
     src = src.flatten()
 
@@ -149,7 +154,7 @@ def main():
                         help='Name of the output file.')
     parser.add_argument('--time_index', default=0,
                         help='The time index of the data to use.')
-    parser.add_argument('--regrid_method', default='scipy',
+    parser.add_argument('--regrid_tool', default='scipy',
                         help='The regridding method to use, scipy or esmf.')
     parser.add_argument('--regrid_weights', default=None,
                         help='The regridding weights file to use.')
@@ -231,7 +236,7 @@ def main():
                       model_grid.num_lon_points))
 
     # Now apply regridding. We have several options here.
-    if args.regrid_method == 'scipy':
+    if args.regrid_tool == 'scipy':
         from mpl_toolkits import basemap
 
         # Move lons and data onto range 0-360
@@ -241,7 +246,7 @@ def main():
         _, gsalt = normalise_lons(global_grid.x_t, gsalt)
 
         # Bilinear interpolation over all levels.
-        # FIXME: print warning for case where src grid is not rectilinear.
+        # FIXME: print warning for case where src grid is not regular.
         print('Regridding to model grid')
         for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
             for l in range(gtemp.shape[0]):
@@ -255,39 +260,36 @@ def main():
         print('')
 
     else:
-        assert args.regrid_method == 'esmf'
+        assert args.regrid_tool == 'esmf'
 
         # Write the source and destination grids out in SCRIP format.
         global_grid.write_scrip('global_grid_scrip.nc')
         model_grid.write_scrip('model_grid_scrip.nc')
 
         if not args.regrid_weights:    
-            # Create the remapping weights file.
-            pass
-        else:
-            # Read existing weights.
-            pass
+            args.regrid_weights = 'regrid_weights.nc'
+            # Create regrid weights files using ESMF_RegridWeightGen
+            ret = sp.call(['ESMF_RegridWeightGen',
+                           '-s', 'global_grid_scrip.nc',
+                           '-d', 'model_grid_scrip.nc',
+                           '-m', 'bilinear', '-w', args.regrid_weights])
+            assert(ret == 0)
+            assert(os.path.exists(args.regrid_weights))
 
         # Creating the remapping weights files is a computationally intensive
         # task. For simplicity call external tool for this.
-        #with nc.Dataset(args.regrid_weights) as wf:
-        with nc.Dataset('test.nc') as wf:
+        with nc.Dataset(args.regrid_weights) as wf:
             n_s = wf.dimensions['n_s'].size
             n_b = wf.dimensions['n_b'].size
             row = wf.variables['row'][:]
             col = wf.variables['col'][:]
             s = wf.variables['S'][:]
 
-        import pdb
-        pdb.set_trace()
-
         for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
             for l in range(gtemp.shape[0]):
+                start_time = time.time()    
                 dest[l, :, :] = apply_weights(src[l, :, :], dest.shape[1:],
                                               n_s, n_b, row, col, s)
-                import pdb
-                pdb.set_trace()
-
 
     print('Writing out')
     if args.model_name == 'MOM':
