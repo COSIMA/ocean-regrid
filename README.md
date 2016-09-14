@@ -2,6 +2,15 @@
 
 Create MOM and NEMO 'cold start' (temperature and salinity) initial conditions from either GODAS or ORAS4 reanalysis.
 
+# Dependencies
+
+This package is written in Python and depends on many different Python packages. See section 'Install' below for instructions on how to download all of the Python dependencies.
+
+This package depends on the ESMF_RegridWeightGen program to perform regridding between non-rectilinear grids. More information can be found here: https://www.earthsystemcog.org/projects/regridweightgen/ . ESMF releases can be found here: http://www.earthsystemmodeling.org/download/data/releases.shtml
+
+# Install
+
+
 # Use
 
 Download a reanalysis dataset, many can be found here:
@@ -25,6 +34,13 @@ Creating MOM initial conditions from ORAS4:
 $ ./makeic.py --model_name MOM --obs_grid coords_T.nc --model_mask ocean_mask.nc ocean_hgrid.nc ocean_vgrid.nc thetao_oras4_1m_2014_grid_T.nc so_oras4_1m_2014_grid_T.nc --output mom_oras4_ic.nc
 ```
 
+Creating NEMO initial condisionf from ORAS4:
+```
+$ ./makeic.py --model_name MOM --obs_grid coords_T.nc --model_mask ocean_mask.nc ocean_hgrid.nc ocean_vgrid.nc thetao_oras4_1m_2014_grid_T.nc so_oras4_1m_2014_grid_T.nc --output mom_oras4_ic.nc
+```
+
+# Testing
+
 # How it works
 
 1. The reanalysis/obs dataset is regridded in the vertical to have the same depth and levels as the model grid. Linear interpolation is used for this. If the model is deeper than the obs then the deepest value is extended.
@@ -39,10 +55,8 @@ $ ./makeic.py --model_name MOM --obs_grid coords_T.nc --model_mask ocean_mask.nc
 
 * Because the IC only includes salt and temperature the ocean model needs to be able to start from rest.
 * When using GODAS reanalysis the values at high latitudes are unphysical due to limited observations.
-* WARNING: presently the final interpolation assumes that the obs/reanalysis grid is a regular lat-lon grid, this is not the case for ORAS4.
 
 # Example output
 
 ![MOM IC based on GODAS reanalysis](https://raw.github.com/nicjhan/ocean-ic/master/examples/MOM_IC_GODAS.png)
 
-Notice the unusual lines at high latitude. This occurs because the GODAS temperature dataset is limited to 65 deg N, beyond that nearest neighbour values are being used.

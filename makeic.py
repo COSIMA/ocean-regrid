@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 import sys, os
-import time
+import tempfile
 import argparse
 import numpy as np
 import numba
@@ -24,11 +24,6 @@ from util import normalise_lons
 
 """
 Create ocean model IC based on reanalysis data.
-
-What needs to be done:
-1. Testing
-2. Use tmp files for scrip and weights.
-3. 
 """
 
 GODAS_BERING_STRAIGHT = [416, 184]
@@ -140,7 +135,6 @@ def apply_weights(src, dest_shape, n_s, n_b, row, col, s):
 
     return dest.reshape(dest_shape)
 
-
 def main():
 
     parser = argparse.ArgumentParser()
@@ -163,13 +157,28 @@ def main():
                         help="""
                         The name of the regridding weights file. Will be created if it doesn't exist
                         """)
+    parser.add_argument('--use_mpi', action='store_true', default=False,
+                        help="""Use MPI to when calculating the regridding weights.
+                               This will speed up the calculation considerably.""")
+
 
     args = parser.parse_args()
 
     assert args.model_name == 'MOM' or args.model_name == 'NEMO'
     assert args.obs_name == 'GODAS' or args.obs_name == 'ORAS4'
 
-    # FIXME: if using esmf check that we have ESMF installed.
+    ret = sp.call(['which', 'ESMF_RegridWeightGen'])
+    if ret:
+        print('\n Error: makeic.py program dependson on ESMF_RegridWeightGen which is not installed.\n',
+               file=sys.stderr)
+        return 1
+
+    if args.use_mpi:            
+        ret = sp.call(['which', 'mpirun'])
+        if ret:
+            print('\n Error: mpirun must be installed when the --use_mpi flag is used.\n',
+                   file=sys.stderr)
+            return 1
 
     if args.obs_name == 'ORAS4' and args.obs_grid is None:
         print('\n Error: --obs_grid must be used for ORAS4 reanalysis\n', file=sys.stderr)
@@ -241,16 +250,22 @@ def main():
                       model_grid.num_lon_points))
 
     # Write the source and destination grids out in SCRIP format.
-    global_grid.write_scrip('global_grid_scrip.nc')
-    model_grid.write_scrip('model_grid_scrip.nc')
+    _, global_grid_scrip = tempfile.mkstemp(suffix='.nc')
+    global_grid.write_scrip(global_grid_scrip)
+    _, model_grid_scrip = tempfile.mkstemp(suffix='.nc')
+    model_grid.write_scrip(model_grid_scrip)
 
     # Creating the remapping weights files is a computationally intensive
     # task. For simplicity call external tool for this.
-    if not args.regrid_weights:
+    if args.regrid_weights is None or not os.path.exists(args.regrid_weights):
         args.regrid_weights = 'regrid_weights.nc'
-        ret = sp.call(['ESMF_RegridWeightGen',
-                       '-s', 'global_grid_scrip.nc',
-                       '-d', 'model_grid_scrip.nc',
+        mpi = []
+        if args.use_mpi:
+            mpi = ['mpirun', '-n', '8']
+            
+        ret = sp.call(mpi + ['ESMF_RegridWeightGen',
+                       '-s', global_grid_scrip,
+                       '-d', model_grid_scrip,
                        '-m', 'bilinear', '-w', args.regrid_weights])
         assert(ret == 0)
         assert(os.path.exists(args.regrid_weights))
@@ -264,7 +279,6 @@ def main():
 
     for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
         for l in range(gtemp.shape[0]):
-            start_time = time.time()
             dest[l, :, :] = apply_weights(src[l, :, :], dest.shape[1:],
                                           n_s, n_b, row, col, s)
 
@@ -273,11 +287,8 @@ def main():
         # Apply ocean mask.
         if model_grid.mask is not None:
             mask = np.stack([model_grid.mask] * model_grid.num_levels)
-            # Shift mask
-            _, mask = normalise_lons(model_grid.x_t, mask)
             temp = np.ma.array(mtemp, mask=mask)
             salt = np.ma.array(msalt, mask=mask)
-
         write_mom_ic(model_grid, temp, salt, args.output, ''.join(sys.argv))
     else:
         write_nemo_ic(model_grid, mtemp, msalt, args.output, ''.join(sys.argv))
