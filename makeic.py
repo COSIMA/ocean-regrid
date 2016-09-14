@@ -6,7 +6,7 @@ import sys, os
 import time
 import argparse
 import numpy as np
-import numba 
+import numba
 import subprocess as sp
 import netCDF4 as nc
 from scipy import interp
@@ -24,6 +24,11 @@ from util import normalise_lons
 
 """
 Create ocean model IC based on reanalysis data.
+
+What needs to be done:
+1. Testing
+2. Use tmp files for scrip and weights.
+3. 
 """
 
 GODAS_BERING_STRAIGHT = [416, 184]
@@ -154,10 +159,10 @@ def main():
                         help='Name of the output file.')
     parser.add_argument('--time_index', default=0,
                         help='The time index of the data to use.')
-    parser.add_argument('--regrid_tool', default='scipy',
-                        help='The regridding method to use, scipy or esmf.')
     parser.add_argument('--regrid_weights', default=None,
-                        help='The regridding weights file to use.')
+                        help="""
+                        The name of the regridding weights file. Will be created if it doesn't exist
+                        """)
 
     args = parser.parse_args()
 
@@ -229,67 +234,39 @@ def main():
         gtemp = fill_arctic(otemp, gtemp, obs_grid, global_grid)
         gsalt = fill_arctic(osalt, gsalt, obs_grid, global_grid)
 
-    # Destination arrays    
+    # Now do regridding. Destination arrays
     mtemp = np.ndarray((model_grid.num_levels, model_grid.num_lat_points,
                       model_grid.num_lon_points))
     msalt = np.ndarray((model_grid.num_levels, model_grid.num_lat_points,
                       model_grid.num_lon_points))
 
-    # Now apply regridding. We have several options here.
-    if args.regrid_tool == 'scipy':
-        from mpl_toolkits import basemap
+    # Write the source and destination grids out in SCRIP format.
+    global_grid.write_scrip('global_grid_scrip.nc')
+    model_grid.write_scrip('model_grid_scrip.nc')
 
-        # Move lons and data onto range 0-360
-        # FIXME: assert that lats don't need to be shifted as well.
-        mlons, _ = normalise_lons(model_grid.x_t)
-        glons, gtemp = normalise_lons(global_grid.x_t, gtemp)
-        _, gsalt = normalise_lons(global_grid.x_t, gsalt)
+    # Creating the remapping weights files is a computationally intensive
+    # task. For simplicity call external tool for this.
+    if not args.regrid_weights:
+        args.regrid_weights = 'regrid_weights.nc'
+        ret = sp.call(['ESMF_RegridWeightGen',
+                       '-s', 'global_grid_scrip.nc',
+                       '-d', 'model_grid_scrip.nc',
+                       '-m', 'bilinear', '-w', args.regrid_weights])
+        assert(ret == 0)
+        assert(os.path.exists(args.regrid_weights))
 
-        # Bilinear interpolation over all levels.
-        # FIXME: print warning for case where src grid is not regular.
-        print('Regridding to model grid')
-        for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
-            for l in range(gtemp.shape[0]):
-                print('.', end='')
-                sys.stdout.flush()
-                dest[l, :, :] = basemap.interp(src[l,:,:],
-                                               glons[150, :],
-                                               global_grid.y_t[:, 150],
-                                               mlons, model_grid.y_t,
-                                               order=1)
-        print('')
+    with nc.Dataset(args.regrid_weights) as wf:
+        n_s = wf.dimensions['n_s'].size
+        n_b = wf.dimensions['n_b'].size
+        row = wf.variables['row'][:]
+        col = wf.variables['col'][:]
+        s = wf.variables['S'][:]
 
-    else:
-        assert args.regrid_tool == 'esmf'
-
-        # Write the source and destination grids out in SCRIP format.
-        global_grid.write_scrip('global_grid_scrip.nc')
-        model_grid.write_scrip('model_grid_scrip.nc')
-
-        if not args.regrid_weights:    
-            args.regrid_weights = 'regrid_weights.nc'
-            # Create regrid weights files using ESMF_RegridWeightGen
-            ret = sp.call(['ESMF_RegridWeightGen',
-                           '-s', 'global_grid_scrip.nc',
-                           '-d', 'model_grid_scrip.nc',
-                           '-m', 'bilinear', '-w', args.regrid_weights])
-            assert(ret == 0)
-            assert(os.path.exists(args.regrid_weights))
-
-        # Creating the remapping weights files is a computationally intensive
-        # task. For simplicity call external tool for this.
-        with nc.Dataset(args.regrid_weights) as wf:
-            n_s = wf.dimensions['n_s'].size
-            n_b = wf.dimensions['n_b'].size
-            row = wf.variables['row'][:]
-            col = wf.variables['col'][:]
-            s = wf.variables['S'][:]
-
-        for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
-            for l in range(gtemp.shape[0]):
-                start_time = time.time()    
-                dest[l, :, :] = apply_weights(src[l, :, :], dest.shape[1:],
-                                              n_s, n_b, row, col, s)
+    for src, dest in [(gtemp, mtemp), (gsalt, msalt)]:
+        for l in range(gtemp.shape[0]):
+            start_time = time.time()
+            dest[l, :, :] = apply_weights(src[l, :, :], dest.shape[1:],
+                                          n_s, n_b, row, col, s)
 
     print('Writing out')
     if args.model_name == 'MOM':
