@@ -36,6 +36,7 @@ class MomGrid(Grid):
 
     def make_corners(self):
 
+        # Uses double density grid to figure out corners.    
         x = self.x_vt
         y = self.y_vt
 
