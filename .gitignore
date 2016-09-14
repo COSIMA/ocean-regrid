@@ -1,4 +1,6 @@
 *.pyc
+*.nc
+*.RegridWeightGen.Log
 
 MOM_grid
 NEMO_grid
