@@ -39,8 +39,8 @@ class Grid(object):
         self.description = description
 
         if mask is None:
-            # Default is to mask all, up to user to unmask.
-            self.mask = np.ones((self.num_levels,
+            # Default is all unmasked, up to user to mask.
+            self.mask = np.zeros((self.num_levels,
                                  self.num_lat_points, self.num_lon_points),
                                  dtype='int')
         else:
@@ -86,7 +86,57 @@ class Grid(object):
         self.clon_t = clon
         self.clat_t = clat
 
-    def write_scrip(self, filename, history=''):
+    def write_test_scrip(self, filename):
+        """
+        Write out SCRIP grid contents in a format which is easier to test.
+        """
+
+        f = nc.Dataset(filename, 'w')
+
+        x = self.x_t
+        y = self.y_t
+        clat = self.clat_t
+        clon = self.clon_t
+
+        f.createDimension('lats', self.num_lat_points)
+        f.createDimension('lons', self.num_lon_points)
+        f.createDimension('grid_corners', 4)
+        f.createDimension('grid_rank', 2)
+
+        center_lat = f.createVariable('center_lat', 'f8', ('lats', 'lons'))
+        center_lat.units = 'degrees'
+        center_lat[:] = y[:]
+
+        center_lon = f.createVariable('center_lon', 'f8', ('lats', 'lons'))
+        center_lon.units = 'degrees'
+        center_lon[:] = x[:]
+
+        imask = f.createVariable('mask', 'i4', ('lats', 'lons'))
+        imask.units = 'unitless'
+        # Invert the mask. SCRIP uses zero for points that do not
+        # participate.
+        if len(self.mask.shape) == 2:
+            imask[:] = np.invert(self.mask[:])
+        else:
+            imask[:] = np.invert(self.mask[0, :, :])
+
+        corner_lat = f.createVariable('corner_lat', 'f8',
+                                      ('lats', 'lons', 'grid_corners'))
+        corner_lat.units = 'degrees'
+        corner_lat[:] = clat[:]
+
+        corner_lon = f.createVariable('corner_lon', 'f8',
+                                      ('lats', 'lons', 'grid_corners'))
+        corner_lon.units = 'degrees'
+        corner_lon[:] = clon[:]
+
+        f.close()
+
+
+    def write_scrip(self, filename, mask=None, write_test_scrip=True, history=''):
+        """
+        Write out grid in SCRIP format.
+        """
 
         self.make_corners()
 
@@ -117,12 +167,18 @@ class Grid(object):
 
         imask = f.createVariable('grid_imask', 'i4', ('grid_size'))
         imask.units = 'unitless'
+
         # Invert the mask. SCRIP uses zero for points that do not
         # participate.
-        if len(self.mask.shape) == 2:
-            imask[:] = np.invert(self.mask[:]).flatten()
+        if mask is not None:
+            mask = mask
         else:
-            imask[:] = np.invert(self.mask[0, :, :]).flatten()
+            mask = self.mask
+
+        if len(mask.shape) == 2:
+            imask[:] = np.invert(mask[:]).flatten()
+        else:
+            imask[:] = np.invert(mask[0, :, :]).flatten()
 
         corner_lat = f.createVariable('grid_corner_lat', 'f8',
                                       ('grid_size', 'grid_corners'))
@@ -137,3 +193,7 @@ class Grid(object):
         f.title = self.description
         f.history = history
         f.close()
+
+        if write_test_scrip:
+            self.write_test_scrip(filename + '_test')
+            

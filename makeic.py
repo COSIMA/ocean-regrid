@@ -44,7 +44,7 @@ def regrid_columns(data, src_grid, dest_grid):
 
     # Create masked array of the correct shape.
     tmp = np.zeros((len(dest_grid.z), data.shape[1], data.shape[2]))
-    new_data = np.ma.array(tmp, mask=np.ones_like(tmp))
+    new_data = np.ma.array(tmp, mask=np.ones_like(tmp), copy=True)
 
     # Iterate through columns and regrid each.
     for lat in range(data.shape[1]):
@@ -73,7 +73,7 @@ def extend_obs(var, obs_grid, global_grid, arctic_filler=None):
     # Create masked array of the correct shape.
     tmp = np.zeros((global_grid.num_levels, global_grid.num_lat_points,
                     global_grid.num_lon_points))
-    new_data = np.ma.array(tmp, mask=global_grid.mask)
+    new_data = np.ma.array(tmp, mask=global_grid.mask, copy=True)
 
     # Drop obs data into new grid at correct location
     lat_min_idx = find_nearest_index(global_grid.y_t[:, 0], np.min(obs_grid.y_t[:]))
@@ -93,7 +93,6 @@ def extend_obs(var, obs_grid, global_grid, arctic_filler=None):
         new_data[l, :, :] = tmp[:, :]
 
     return new_data
-
 
 def fill_arctic(obs_data, global_data, obs_grid, global_grid):
     """
@@ -249,9 +248,10 @@ def main():
     msalt = np.ndarray((model_grid.num_levels, model_grid.num_lat_points,
                       model_grid.num_lon_points))
 
-    # Write the source and destination grids out in SCRIP format.
+    # Write the source and destination grids out in SCRIP format. We override
+    # the mask to use the data mask rather than the grid mask.
     _, global_grid_scrip = tempfile.mkstemp(suffix='.nc')
-    global_grid.write_scrip(global_grid_scrip)
+    global_grid.write_scrip(global_grid_scrip, gtemp.mask)
     _, model_grid_scrip = tempfile.mkstemp(suffix='.nc')
     model_grid.write_scrip(model_grid_scrip)
 

@@ -28,13 +28,16 @@ class TripolarGrid(Grid):
             x_t[:new_rows, :] = np.stack([tripolar_grid.x_t[0, :]]*new_rows)
 
             y_t[new_rows:, :] = tripolar_grid.y_t[:]
-            for n in range(new_rows-1, 0, -1):
+            for n in range(new_rows-1, -1, -1):
                 y_t[n, :] = y_t[n+1, :] - dy
+
+            tripolar_mask = np.zeros_like(tripolar_grid.mask, dtype=bool)
+            tripolar_mask[tripolar_grid.mask[:] == 0.0] = True
 
             # Drop the mask in, with new rows being masked by default.
             mask = np.ndarray((levels.shape[0], y_t.shape[0], y_t.shape[1]), dtype=bool)
             mask[:] = True
-            mask[levels.shape[0]-tripolar_grid.mask.shape[0]:, new_rows:, :] = tripolar_grid.mask[:]
+            mask[levels.shape[0]-tripolar_grid.mask.shape[0]:, new_rows:, :] = tripolar_mask[:]
         else:
             x_t = tripolar_grid.x_t[:]
             y_t = tripolar_grid.x_y[:]
@@ -55,11 +58,11 @@ class TripolarGrid(Grid):
 
         # Need to extend South
         dy_half[0, 1:] = dy_half[1, 1:]
-        dx_half[0, 1:] = dy_half[1, 1:]
+        dx_half[0, 1:] = dx_half[1, 1:]
 
         # and West
         dy_half[:, 0] = dy_half[:, 1]
-        dx_half[:, 0] = dy_half[:, 1]
+        dx_half[:, 0] = dx_half[:, 1]
 
         clon = np.empty((self.num_lat_points, self.num_lon_points, 4))
         clon[:] = np.NAN
