@@ -2,13 +2,15 @@
 import netCDF4 as nc
 from mom_grid import MomGrid
 
-def write_mom_ic(ocean_grid, temp_data, salt_data, filename, history):
+def create_mom_output(ocean_grid, filename,
+                      var_name, var_longname, var_units, history):
 
     f = nc.Dataset(filename, 'w')
 
     f.createDimension('GRID_Y_T', ocean_grid.num_lat_points)
     f.createDimension('GRID_X_T', ocean_grid.num_lon_points)
     f.createDimension('ZT', ocean_grid.num_levels)
+    f.createDimension('time')
 
     lats = f.createVariable('GRID_Y_T', 'f8', ('GRID_Y_T'))
     lats.long_name = 'Nominal Latitude of T-cell center'
@@ -36,23 +38,30 @@ def write_mom_ic(ocean_grid, temp_data, salt_data, filename, history):
     # FIXME
     zt[:] = ocean_grid.z[:]
 
-    temp = f.createVariable('temp', 'f8', ('ZT', 'GRID_Y_T', 'GRID_X_T'), fill_value=-1.e+34)
-    temp.missing_value = -1.e+34
-    temp.long_name = "Temperature"
-    temp.units = "deg C"
-    temp.history = history
-    temp[:] = temp_data[:]
+    time = f.createVariable('time', 'f8', ('time'))
+    time.long_name = 'time'
+    time:units = "days since 0001-01-01 00:00:00"
+    time:cartesian_axis = "T"
+    time:calendar_type = "GREGORIAN"
+    time:calendar = "GREGORIAN"
 
-    salt = f.createVariable('salt', 'f8', ('ZT', 'GRID_Y_T', 'GRID_X_T'), fill_value=-1.e+34)
-    salt.missing_value = -1.e+34
-    salt.long_name = "Salinity"
-    salt.units = "psu"
-    salt.history = history
-    salt[:] = salt_data[:]
+    temp = f.createVariable(var_name, 'f8', ('time', 'ZT', 'GRID_Y_T', 'GRID_X_T'), fill_value=-1.e+34)
+    temp.missing_value = -1.e+34
+    temp.long_name = var_longname
+    temp.units = var_units
+    temp.history = history
 
     f.close()
 
-def write_nemo_ic(ocean_grid, temp_data, salt_data, filename, history):
+def write_mom_output_at_time(filename, var_name, var_data, time_idx):
+
+    with nc.Dataset(filename, 'r+') as f:
+        var = f.variables[var_name]
+        var[time_idx, :] = var_data[:]
+
+
+def create_nemo_output(ocean_grid, filename,
+                            var_name, var_longname, var_units, history):
 
     f = nc.Dataset(filename, 'w')
 
@@ -71,13 +80,16 @@ def write_nemo_ic(ocean_grid, temp_data, salt_data, filename, history):
     depth[:] = ocean_grid.z[:]
 
     time = f.createVariable('time_counter', 'f8', ('time_counter'))
-    time[:] = 0
+    time.long_name = 'time'
+    time:units = "days since 0001-01-01 00:00:00"
+    time:cartesian_axis = "T"
 
-    temp = f.createVariable('votemper', 'f8', ('time_counter', 'z', 'y', 'x'))
-    temp[0, :] = temp_data[:]
-
-    salt = f.createVariable('vosaline', 'f8', ('time_counter', 'z', 'y', 'x'))
-    salt[0, :] = salt_data[:]
+    f.createVariable(var_name, 'f8', ('time_counter', 'z', 'y', 'x'))
 
     f.close()
 
+def write_nemo_output_at_time(filename, var_name, var_data, time_idx):
+
+    with nc.Dataset(filename, 'r+') as f:
+        var = f.variables[var_name]
+        var[time_idx, :] = var_data[:]
