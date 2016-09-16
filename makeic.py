@@ -150,8 +150,9 @@ def main():
                         help='Observations grid definition file, must be provided for ORAS4')
     parser.add_argument('--output', default='ocean_ic.nc',
                         help='Name of the output file.')
-    parser.add_argument('--time_index', default=0,
-                        help='The time index of the data to use.')
+    parser.add_argument('--month', default=1,
+                        help="""Which month of the data to use.
+                                Assumes datasets containing 12 months.""")
     parser.add_argument('--regrid_weights', default=None,
                         help="""
                         The name of the regridding weights file. Will be created if it doesn't exist
@@ -218,10 +219,10 @@ def main():
         salt_var = 'salt'
 
     with nc.Dataset(args.temp_obs_file) as obs:
-        otemp = obs.variables[temp_var][args.time_index, :]
+        otemp = obs.variables[temp_var][args.month-1, :]
         temp_units = obs.variables[temp_var].units
     with nc.Dataset(args.salt_obs_file) as obs:
-        osalt = obs.variables[salt_var][args.time_index, :]
+        osalt = obs.variables[salt_var][args.month-1, :]
         salt_units = obs.variables[salt_var].units
         # Convert salt from kg/kg to g/kg
         if salt_units == 'kg/kg':
