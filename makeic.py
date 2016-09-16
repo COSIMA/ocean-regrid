@@ -173,7 +173,7 @@ def main():
                file=sys.stderr)
         return 1
 
-    if args.use_mpi:            
+    if args.use_mpi:
         ret = sp.call(['which', 'mpirun'])
         if ret:
             print('\n Error: mpirun must be installed when the --use_mpi flag is used.\n',
@@ -263,7 +263,7 @@ def main():
         mpi = []
         if args.use_mpi:
             mpi = ['mpirun', '-n', '8']
-            
+
         ret = sp.call(mpi + ['ESMF_RegridWeightGen',
                        '-s', global_grid_scrip,
                        '-d', model_grid_scrip,
