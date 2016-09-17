@@ -180,6 +180,117 @@ def regrid(regrid_weights, src_data, dest_grid):
 
     return dest_data
 
+def check_dependencies(use_mpi):
+
+    ret = sp.call(['which', 'ESMF_RegridWeightGen'])
+    if ret:
+        print('\n Error: makeic.py program dependson on ESMF_RegridWeightGen which is not installed.\n',
+               file=sys.stderr)
+        return False
+
+    if use_mpi:
+        ret = sp.call(['which', 'mpirun'])
+        if ret:
+            print('\n Error: mpirun must be installed when the --use_mpi flag is used.\n',
+                   file=sys.stderr)
+            return False
+
+    return True
+
+def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
+                  dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
+                  dest_mask=None, regrid_weights=None, use_mpi=False):
+
+    if not check_dependencies(use_mpi):
+        return 1
+
+    # Destination grid
+    if dest_name == 'MOM':
+        if dest_mask is None:
+            print('\n Error: please provide a --dest_mask when regridding to MOM.\n',
+                  file=sys.stderr)
+            return 1
+        title = 'MOM tripolar t-cell grid'
+        dest_grid = MomGrid(dest_hgrid, dest_vgrid, dest_mask, title)
+    else:
+        title = 'NEMO tripolar t-cell grid'
+        dest_grid = NemoGrid(dest_hgrid, dest_vgrid, dest_mask, title)
+
+    # Source grid
+    if src_name == 'ORAS4':
+        src_grid = OrasGrid(src_hgrid, description='ORAS4')
+    else:
+        src_grid = GodasGrid(src_data_file, description='GODAS')
+
+    # An extra, source-like grids but extended to the whole globe, including
+    # maximum depth. The reanalysis grids have limited domain and/or depth.
+    if src_name == 'ORAS4':
+        global_src_grid = TripolarGrid(src_grid, dest_grid.z,
+                                       description='ORAS4')
+    else:
+        num_lat_points = int(180.0 / src_grid.dy)
+        num_lon_points = int(360.0 / src_grid.dx)
+        description = 'GODAS Equidistant Lat Lon Grid'
+        global_src_grid = RegularGrid(num_lon_points, num_lat_points,
+                                      dest_grid.z, description=description)
+
+    # Write the source and destination grids out in SCRIP format. We override
+    # the src mask because we want to cover everything.
+    _, global_src_grid_scrip = tempfile.mkstemp(suffix='.nc')
+    unmask_all = np.zeros_like(global_src_grid.mask, dtype=int)
+    global_src_grid.write_scrip(global_src_grid_scrip, mask=unmask_all)
+    _, dest_grid_scrip = tempfile.mkstemp(suffix='.nc')
+    dest_grid.write_scrip(dest_grid_scrip)
+
+    # Creating the remapping weights files is a computationally intensive
+    # task. For simplicity call an external tool for this.
+    if regrid_weights is None or not os.path.exists(regrid_weights):
+        regrid_weights = 'regrid_weights.nc'
+        mpi = []
+        if use_mpi:
+            mpi = ['mpirun', '-n', '8']
+
+        ret = sp.call(mpi + ['ESMF_RegridWeightGen',
+                       '-s', global_src_grid_scrip,
+                       '-d', dest_grid_scrip,
+                       '-m', 'bilinear', '-w', regrid_weights])
+        assert(ret == 0)
+        assert(os.path.exists(regrid_weights))
+
+    # Create output file
+    with nc.Dataset(src_data_file) as f:
+        units = f.variables[src_var].units
+        long_name = f.variables[src_var].long_name
+    if dest_name == 'MOM':
+        create_mom_output(dest_grid, dest_data_file, dest_var,
+                          long_name, units, ''.join(sys.argv))
+    else:
+        create_nemo_output(dest_grid, dest_data_file, dest_var,
+                          long_name, units, ''.join(sys.argv))
+
+    # Do regridding on each time point.
+    f = nc.Dataset(src_data_file)
+    src_var = f.variables[src_var]
+
+    for t in range(src_var.shape[0]):
+        src_data = src_var[t, :]
+        src_data = extend_src_data(src_data, src_grid, global_src_grid)
+        dest_data = regrid(regrid_weights, src_data, dest_grid)
+
+        # Write out
+        if dest_name == 'MOM':
+            # Apply ocean mask.
+            if dest_grid.mask is not None:
+                mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
+                dest_data = np.ma.array(dest_data, mask=mask)
+            write_mom_output_at_time(dest_data_file, dest_var, dest_data, t)
+        else:
+            write_nemo_output_at_time(dest_data_file, dest_var, dest_data, t)
+
+    f.close()
+    return 0
+
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -210,103 +321,12 @@ def main():
     assert args.dest_name == 'MOM' or args.dest_name == 'NEMO'
     assert args.src_name == 'GODAS' or args.src_name == 'ORAS4'
 
-    ret = sp.call(['which', 'ESMF_RegridWeightGen'])
-    if ret:
-        print('\n Error: makeic.py program dependson on ESMF_RegridWeightGen which is not installed.\n',
-               file=sys.stderr)
-        return 1
+    return do_regridding(args.src_name, args.src_hgrid, args.src_vgrid,
+                         args.src_data_file, args.src_var,
+                         args.dest_name, args.dest_hgrid, args.dest_vgrid,
+                         args.dest_data_file, args.dest_var,
+                         args.dest_mask, args.regrid_weights, args.use_mpi)
 
-    if args.use_mpi:
-        ret = sp.call(['which', 'mpirun'])
-        if ret:
-            print('\n Error: mpirun must be installed when the --use_mpi flag is used.\n',
-                   file=sys.stderr)
-            return 1
-
-    # Destination grid
-    if args.dest_name == 'MOM':
-        if args.dest_mask is None:
-            print('\n Error: please provide a --dest_mask when regridding to MOM.\n',
-                  file=sys.stderr)
-            return 1
-        title = 'MOM tripolar t-cell grid'
-        dest_grid = MomGrid(args.dest_hgrid, args.dest_vgrid, args.dest_mask, title)
-    else:
-        title = 'NEMO tripolar t-cell grid'
-        dest_grid = NemoGrid(args.dest_hgrid, args.dest_vgrid, args.dest_mask, title)
-
-    # Source grid
-    if args.src_name == 'ORAS4':
-        src_grid = OrasGrid(args.src_hgrid, description='ORAS4')
-    else:
-        src_grid = GodasGrid(args.src_data_file, description='GODAS')
-
-    # An extra, source-like grids but extended to the whole globe, including
-    # maximum depth. The reanalysis grids have limited domain and/or depth.
-    if args.src_name == 'ORAS4':
-        global_src_grid = TripolarGrid(src_grid, dest_grid.z,
-                                       description='ORAS4')
-    else:
-        num_lat_points = int(180.0 / src_grid.dy)
-        num_lon_points = int(360.0 / src_grid.dx)
-        description = 'GODAS Equidistant Lat Lon Grid'
-        global_src_grid = RegularGrid(num_lon_points, num_lat_points,
-                                      dest_grid.z, description=description)
-
-    # Write the source and destination grids out in SCRIP format. We override
-    # the src mask because we want to cover everything.
-    _, global_src_grid_scrip = tempfile.mkstemp(suffix='.nc')
-    unmask_all = np.zeros_like(global_src_grid.mask, dtype=int)
-    global_src_grid.write_scrip(global_src_grid_scrip, mask=unmask_all)
-    _, dest_grid_scrip = tempfile.mkstemp(suffix='.nc')
-    dest_grid.write_scrip(dest_grid_scrip)
-
-    # Creating the remapping weights files is a computationally intensive
-    # task. For simplicity call an external tool for this.
-    if args.regrid_weights is None or not os.path.exists(args.regrid_weights):
-        args.regrid_weights = 'regrid_weights.nc'
-        mpi = []
-        if args.use_mpi:
-            mpi = ['mpirun', '-n', '8']
-
-        ret = sp.call(mpi + ['ESMF_RegridWeightGen',
-                       '-s', global_src_grid_scrip,
-                       '-d', dest_grid_scrip,
-                       '-m', 'bilinear', '-w', args.regrid_weights])
-        assert(ret == 0)
-        assert(os.path.exists(args.regrid_weights))
-
-    # Create output file
-    with nc.Dataset(args.src_data_file) as f:
-        units = f.variables[args.src_var].units
-        long_name = f.variables[args.src_var].long_name
-    if args.dest_name == 'MOM':
-        create_mom_output(dest_grid, args.dest_data_file, args.dest_var,
-                          long_name, units, ''.join(sys.argv))
-    else:
-        create_nemo_output(dest_grid, args.dest_data_file, args.dest_var,
-                          long_name, units, ''.join(sys.argv))
-
-    # Do regridding on each time point.
-    f = nc.Dataset(args.src_data_file)
-    src_var = f.variables[args.src_var]
-
-    for t in range(src_var.shape[0]):
-        src_data = src_var[t, :]
-        src_data = extend_src_data(src_data, src_grid, global_src_grid)
-        dest_data = regrid(args.regrid_weights, src_data, dest_grid)
-
-        # Write out
-        if args.dest_name == 'MOM':
-            # Apply ocean mask.
-            if dest_grid.mask is not None:
-                mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
-                dest_data = np.ma.array(dest_data, mask=mask)
-            write_mom_output_at_time(args.dest_data_file, args.dest_var, dest_data, t)
-        else:
-            write_nemo_output_at_time(args.dest_data_file, args.dest_var, dest_data, t)
-
-    f.close()
 
 if __name__ == '__main__':
     sys.exit(main())

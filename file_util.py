@@ -40,10 +40,10 @@ def create_mom_output(ocean_grid, filename,
 
     time = f.createVariable('time', 'f8', ('time'))
     time.long_name = 'time'
-    time:units = "days since 0001-01-01 00:00:00"
-    time:cartesian_axis = "T"
-    time:calendar_type = "GREGORIAN"
-    time:calendar = "GREGORIAN"
+    time.units = "days since 0001-01-01 00:00:00"
+    time.cartesian_axis = "T"
+    time.calendar_type = "GREGORIAN"
+    time.calendar = "GREGORIAN"
 
     temp = f.createVariable(var_name, 'f8', ('time', 'ZT', 'GRID_Y_T', 'GRID_X_T'), fill_value=-1.e+34)
     temp.missing_value = -1.e+34
@@ -81,8 +81,8 @@ def create_nemo_output(ocean_grid, filename,
 
     time = f.createVariable('time_counter', 'f8', ('time_counter'))
     time.long_name = 'time'
-    time:units = "days since 0001-01-01 00:00:00"
-    time:cartesian_axis = "T"
+    time.units = "days since 0001-01-01 00:00:00"
+    time.cartesian_axis = "T"
 
     f.createVariable(var_name, 'f8', ('time_counter', 'z', 'y', 'x'))
 
