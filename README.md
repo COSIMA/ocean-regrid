@@ -1,6 +1,6 @@
 # ocean-regrid
 
-Regrid GODAS or ORAS4 reanalysis to MOM or NEMO grids. In general this means regridding from regular lat-lon (GODAS) or tripolar (ORAS4) to tripolar (MOM and NEMO) grids.
+Regrid global ocean data in 3d. Suppurts GODAS, ORAS4 reanalysis grids and MOM, NEMO model grids. Handles missing data and grids with mismatched domains.
 
 # Dependencies
 
@@ -11,13 +11,9 @@ This tool is written in Python and depends on many different Python packages. Se
 
 ESMF releases can be found here: http://www.earthsystemmodeling.org/download/data/releases.shtml
 
-# Use
+# Example Use
 
-Download a reanalysis dataset, many can be found here:
-
-https://reanalyses.org/ocean/overview-current-reanalyses
-
-The horizontal and vertical model grid definitions as well as the land-sea mask are also needed, in the case or ORAS4 this is a separate file, for GODAS it is contained within the data file.
+The horizontal and vertical model grid definitions as well as the land-sea mask are needed.
 
 Example command regridding GODAS reanalysis to MOM:
 ```
@@ -43,17 +39,13 @@ $ ./regrid.py --model_name MOM --obs_grid coords_T.nc --model_mask ocean_mask.nc
 
 # How it works
 
-1. The reanalysis/obs dataset is regridded in the vertical to have the same depth and levels as the model grid. Linear interpolation is used for this. If the model is deeper than the obs then the deepest value is extended.
+1. The source dataset is regridded in the vertical to have the same depth and levels as the destination grid. Linear interpolation is used for this. If the destination is deeper than the source then the deepest value is extended.
 
-2. In the case of GODAS since the obs dataset is limited latitudinally it is extended to cover the whole globe. This is done based on nearest neighbours.
+2. If the source dataset is limited latitudinally it is extended to cover the whole globe. This is done based on nearest neighbours.
 
-3. The obs dataset is then regridded onto the model grid using weights calculated with ESMF_RegridWeightGen. Various regridding schemes are supported includeing distance weighted nearest neighbour, bilinear and conservative.
+3. The source dataset is then regridded using weights calculated with ESMF_RegridWeightGen. Various regridding schemes are supported includeing distance weighted nearest neighbour, bilinear and conservative.
 
-4. The model land sea mask is applied and initial condition written out.
-
-# Limitations
-
-* When using GODAS reanalysis the values at high latitudes are unphysical due to limited observations.
+4. The destination land sea mask is applied.
 
 # Example output
 
