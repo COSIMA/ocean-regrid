@@ -199,7 +199,7 @@ def check_dependencies(use_mpi):
 
 def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
-                  dest_mask=None, regrid_weights=None, use_mpi=False):
+                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False):
 
     if not check_dependencies(use_mpi):
         return 1
@@ -262,17 +262,20 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         units = f.variables[src_var].units
         long_name = f.variables[src_var].long_name
     if dest_name == 'MOM':
-        create_mom_output(dest_grid, dest_data_file, dest_var,
-                          long_name, units, ''.join(sys.argv))
+        create_mom_output(dest_grid, dest_data_file, ''.join(sys.argv))
     else:
-        create_nemo_output(dest_grid, dest_data_file, dest_var,
-                          long_name, units, ''.join(sys.argv))
+        create_nemo_output(dest_grid, dest_data_file, ''.join(sys.argv))
 
     # Do regridding on each time point.
     f = nc.Dataset(src_data_file)
     src_var = f.variables[src_var]
 
-    for t in range(src_var.shape[0]):
+    if month is not None:
+        time_idxs = [month - 1]
+    else:
+        time_idxs = range(src_var.shape[0])
+
+    for t in time_idxs:
         src_data = src_var[t, :]
         src_data = extend_src_data(src_data, src_grid, global_src_grid)
         dest_data = regrid(regrid_weights, src_data, dest_grid)
@@ -283,13 +286,14 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
             if dest_grid.mask is not None:
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
                 dest_data = np.ma.array(dest_data, mask=mask)
-            write_mom_output_at_time(dest_data_file, dest_var, dest_data, t)
+            write_mom_output_at_time(dest_data_file, dest_var, long_name,
+                                     units, dest_data, t)
         else:
-            write_nemo_output_at_time(dest_data_file, dest_var, dest_data, t)
+            write_nemo_output_at_time(dest_data_file, dest_var, long_name,
+                                      units, dest_data, t)
 
     f.close()
     return 0
-
 
 def main():
 
@@ -308,6 +312,7 @@ def main():
     parser.add_argument('dest_data_file', help='Name of the destination/output file.')
     parser.add_argument('dest_var', help='Name of the destination/output variable.')
     parser.add_argument('--dest_mask', default=None, help='Destination land-sea mask file.')
+    parser.add_argument('--month', default=None, help='Regrid a single month. Default is all.')
 
     parser.add_argument('--regrid_weights', default=None,
                         help="""
@@ -325,8 +330,8 @@ def main():
                          args.src_data_file, args.src_var,
                          args.dest_name, args.dest_hgrid, args.dest_vgrid,
                          args.dest_data_file, args.dest_var,
-                         args.dest_mask, args.regrid_weights, args.use_mpi)
-
+                         args.dest_mask, args.month, args.regrid_weights,
+                         args.use_mpi)
 
 if __name__ == '__main__':
     sys.exit(main())

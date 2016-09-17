@@ -2,8 +2,7 @@
 import netCDF4 as nc
 from mom_grid import MomGrid
 
-def create_mom_output(ocean_grid, filename,
-                      var_name, var_longname, var_units, history):
+def create_mom_output(ocean_grid, filename, history):
 
     f = nc.Dataset(filename, 'w')
 
@@ -45,23 +44,24 @@ def create_mom_output(ocean_grid, filename,
     time.calendar_type = "GREGORIAN"
     time.calendar = "GREGORIAN"
 
-    temp = f.createVariable(var_name, 'f8', ('time', 'ZT', 'GRID_Y_T', 'GRID_X_T'), fill_value=-1.e+34)
-    temp.missing_value = -1.e+34
-    temp.long_name = var_longname
-    temp.units = var_units
-    temp.history = history
-
     f.close()
 
-def write_mom_output_at_time(filename, var_name, var_data, time_idx):
+def write_mom_output_at_time(filename, var_name, var_longname, var_units, var_data, time_idx):
 
     with nc.Dataset(filename, 'r+') as f:
+        if not f.variables.has_key(var_name):
+            var = f.createVariable(var_name, 'f8',
+                                   ('time', 'ZT', 'GRID_Y_T', 'GRID_X_T'),
+                                   fill_value=-1.e+34)
+            var.missing_value = -1.e+34
+            var.long_name = var_longname
+            var.units = var_units
+
         var = f.variables[var_name]
         var[time_idx, :] = var_data[:]
 
 
 def create_nemo_output(ocean_grid, filename,
-                            var_name, var_longname, var_units, history):
 
     f = nc.Dataset(filename, 'w')
 
@@ -84,12 +84,16 @@ def create_nemo_output(ocean_grid, filename,
     time.units = "days since 0001-01-01 00:00:00"
     time.cartesian_axis = "T"
 
-    f.createVariable(var_name, 'f8', ('time_counter', 'z', 'y', 'x'))
-
     f.close()
 
-def write_nemo_output_at_time(filename, var_name, var_data, time_idx):
+def write_nemo_output_at_time(filename, var_name, var_longname, var_units,
+                              var_data, time_idx):
 
     with nc.Dataset(filename, 'r+') as f:
+        if not f.variables.has_key(var_name):
+            var = f.createVariable(var_name, 'f8', ('time_counter', 'z', 'y', 'x'))
+            var.long_name = var_longname
+            var.units = var_units
+
         var = f.variables[var_name]
         var[time_idx, :] = var_data[:]
