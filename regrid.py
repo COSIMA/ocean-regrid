@@ -293,7 +293,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                                       units, dest_data, t)
 
     f.close()
-    return 0
+    return regrid_weights
 
 def main():
 
@@ -326,12 +326,13 @@ def main():
     assert args.dest_name == 'MOM' or args.dest_name == 'NEMO'
     assert args.src_name == 'GODAS' or args.src_name == 'ORAS4'
 
-    return do_regridding(args.src_name, args.src_hgrid, args.src_vgrid,
-                         args.src_data_file, args.src_var,
-                         args.dest_name, args.dest_hgrid, args.dest_vgrid,
-                         args.dest_data_file, args.dest_var,
-                         args.dest_mask, args.month, args.regrid_weights,
-                         args.use_mpi)
+    do_regridding(args.src_name, args.src_hgrid, args.src_vgrid,
+                  args.src_data_file, args.src_var,
+                  args.dest_name, args.dest_hgrid, args.dest_vgrid,
+                  args.dest_data_file, args.dest_var,
+                  args.dest_mask, args.month, args.regrid_weights,
+                  args.use_mpi)
+    return 0
 
 if __name__ == '__main__':
     sys.exit(main())
