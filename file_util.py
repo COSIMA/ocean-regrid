@@ -61,7 +61,7 @@ def write_mom_output_at_time(filename, var_name, var_longname, var_units, var_da
         var[time_idx, :] = var_data[:]
 
 
-def create_nemo_output(ocean_grid, filename,
+def create_nemo_output(ocean_grid, filename, history):
 
     f = nc.Dataset(filename, 'w')
 
