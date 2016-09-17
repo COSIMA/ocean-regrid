@@ -13,26 +13,9 @@ ESMF releases can be found here: http://www.earthsystemmodeling.org/download/dat
 
 # Example Use
 
-The horizontal and vertical model grid definitions as well as the land-sea mask are needed.
-
-Example command regridding GODAS reanalysis to MOM:
-```
-$ ./regrid.py --obs_name GODAS --model_mask ocean_mask.nc ocean_hgrid.nc ocean_vgrid.nc pottmp.2016.nc salt.2016.nc
-```
-
-Creating NEMO initial condition from GODAS:
-```
-$ ./regrid.py --model_name NEMO --obs_name GODAS coordinates.nc data_1m_potential_temperature_nomask.nc pottmp.2016.nc salt.2016.nc
-```
-
-Creating MOM initial conditions from ORAS4:
+Regrid ORAS4 reanalysis to MOM 0.25 degree tripolar grid:
 ```
 $ ./regrid.py ORAS4 coords_T.nc coords_T.nc thetao_oras4_1m_2014_grid_T.nc thetao MOM ocean_hgrid.nc ocean_vgrid.nc ocean_out.nc temp --dest_mask ocean_mask.nc
-```
-
-Creating NEMO initial condisionf from ORAS4:
-```
-$ ./regrid.py --model_name MOM --obs_grid coords_T.nc --model_mask ocean_mask.nc ocean_hgrid.nc ocean_vgrid.nc thetao_oras4_1m_2014_grid_T.nc so_oras4_1m_2014_grid_T.nc --output mom_oras4_ic.nc
 ```
 
 # Testing
