@@ -39,7 +39,8 @@ def create_mom_output(ocean_grid, filename, start_date, history):
 
     time = f.createVariable('time', 'f8', ('time'))
     time.long_name = 'time'
-    time.units = "days since {}-{}-01 00:00:00".format(str(start_date.year).zfill(4), start_date.month)
+    time.units = "days since {}-{}-01 00:00:00".format(str(start_date.year).zfill(4),
+                                                       str(start_date.month).zfill(2))
     time.cartesian_axis = "T"
     time.calendar_type = "GREGORIAN"
     time.calendar = "GREGORIAN"
@@ -83,7 +84,8 @@ def create_nemo_output(ocean_grid, filename, start_date, history):
 
     time = f.createVariable('time_counter', 'f8', ('time_counter'))
     time.long_name = 'time'
-    time.units = "days since {}-{}-01 00:00:00".format(str(start_date.year).zfill(4), start_date.month)
+    time.units = "days since {}-{}-01 00:00:00".format(str(start_date.year).zfill(4),
+                                                       str(start_date.month).zfill(2))
     time.cartesian_axis = "T"
 
     f.close()
