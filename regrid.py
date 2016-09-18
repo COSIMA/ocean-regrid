@@ -21,7 +21,7 @@ from oras_grid import OrasGrid
 
 from file_util import create_mom_output, write_mom_output_at_time
 from file_util import create_nemo_output, write_nemo_output_at_time
-from util import normalise_lons
+from util import normalise_lons, get_time_origin
 
 """
 Create ocean model IC based on reanalysis data.
@@ -163,6 +163,7 @@ def regrid(regrid_weights, src_data, dest_grid):
     Regrid a single time index of data.
     """
 
+    print('Horizontal regridding ...')
     # Destination arrays
     dest_data = np.ndarray((dest_grid.num_levels, dest_grid.num_lat_points,
                             dest_grid.num_lon_points))
@@ -275,7 +276,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         time_idxs = [month - 1]
     else:
         time_idxs = range(src_var.shape[0])
-   time_points = f.variables['time'][time_idxs]
+    time_points = f.variables['time'][time_idxs]
 
     for t_idx, t_pt in zip(time_idxs, time_points):
         src_data = src_var[t_idx, :]

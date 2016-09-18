@@ -1,6 +1,8 @@
 
 import numpy as np
+import re
 import datetime as dt
+import netCDF4 as nc
 
 def normalise_lons(lons, data=None):
     """
