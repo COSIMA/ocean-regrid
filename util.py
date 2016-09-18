@@ -1,5 +1,6 @@
 
 import numpy as np
+import datetime as dt
 
 def normalise_lons(lons, data=None):
     """
@@ -44,3 +45,18 @@ def normalise_lons(lons, data=None):
             break
 
     return new_lons, new_data
+
+def get_time_origin(filename):
+    """
+    Parse time.units to find the start/origin date of the file. Return a
+    datetime.date object.
+    """
+
+    with nc.Dataset(filename) as f:
+        time_var = f.variables['time']
+        assert('days since' in time_var.units)
+        m = re.search('\d{4}-\d{2}-\d{2}', time_var.units)
+        assert(m is not None)
+        date = dt.datetime.strptime(m.group(0), '%Y-%m-%d')
+
+    return dt.date(date.year, date.month, date.day)

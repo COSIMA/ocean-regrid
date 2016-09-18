@@ -258,11 +258,14 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         assert(os.path.exists(regrid_weights))
 
     # Create output file
+    time_origin = get_time_origin(src_data_file)
     if not os.path.exists(dest_data_file):
         if dest_name == 'MOM':
-            create_mom_output(dest_grid, dest_data_file, ''.join(sys.argv))
+            create_mom_output(dest_grid, dest_data_file, time_origin,
+                              ''.join(sys.argv))
         else:
-            create_nemo_output(dest_grid, dest_data_file, ''.join(sys.argv))
+            create_nemo_output(dest_grid, dest_data_file, time_origin,
+                               ''.join(sys.argv))
 
     # Do regridding on each time point.
     f = nc.Dataset(src_data_file)
@@ -272,9 +275,10 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         time_idxs = [month - 1]
     else:
         time_idxs = range(src_var.shape[0])
+   time_points = f.variables['time'][time_idxs]
 
-    for t in time_idxs:
-        src_data = src_var[t, :]
+    for t_idx, t_pt in zip(time_idxs, time_points):
+        src_data = src_var[t_idx, :]
         src_data = extend_src_data(src_data, src_grid, global_src_grid)
         dest_data = regrid(regrid_weights, src_data, dest_grid)
 
@@ -285,10 +289,10 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
                 dest_data = np.ma.array(dest_data, mask=mask)
             write_mom_output_at_time(dest_data_file, dest_var, src_var.long_name,
-                                     src_var.units, dest_data, t)
+                                     src_var.units, dest_data, t_idx, t_pt)
         else:
             write_nemo_output_at_time(dest_data_file, dest_var, src_var.long_name,
-                                      src_var.units, dest_data, t)
+                                      src_var.units, dest_data, t_idx, t_pt)
 
     f.close()
     return regrid_weights

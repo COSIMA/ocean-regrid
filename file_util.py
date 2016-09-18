@@ -2,7 +2,7 @@
 import netCDF4 as nc
 from mom_grid import MomGrid
 
-def create_mom_output(ocean_grid, filename, history):
+def create_mom_output(ocean_grid, filename, start_date, history):
 
     f = nc.Dataset(filename, 'w')
 
@@ -39,14 +39,15 @@ def create_mom_output(ocean_grid, filename, history):
 
     time = f.createVariable('time', 'f8', ('time'))
     time.long_name = 'time'
-    time.units = "days since 0001-01-01 00:00:00"
+    time.units = "days since {}-{}-01 00:00:00".format(start_date.year, start_date.month)
     time.cartesian_axis = "T"
     time.calendar_type = "GREGORIAN"
     time.calendar = "GREGORIAN"
 
     f.close()
 
-def write_mom_output_at_time(filename, var_name, var_longname, var_units, var_data, time_idx):
+def write_mom_output_at_time(filename, var_name, var_longname, var_units,
+                             var_data, time_idx, time_pt):
 
     with nc.Dataset(filename, 'r+') as f:
         if not f.variables.has_key(var_name):
@@ -59,9 +60,10 @@ def write_mom_output_at_time(filename, var_name, var_longname, var_units, var_da
 
         var = f.variables[var_name]
         var[time_idx, :] = var_data[:]
+        f.variables['time'][time_idx] = time_pt
 
 
-def create_nemo_output(ocean_grid, filename, history):
+def create_nemo_output(ocean_grid, filename, start_date, history):
 
     f = nc.Dataset(filename, 'w')
 
@@ -81,13 +83,13 @@ def create_nemo_output(ocean_grid, filename, history):
 
     time = f.createVariable('time_counter', 'f8', ('time_counter'))
     time.long_name = 'time'
-    time.units = "days since 0001-01-01 00:00:00"
+    time.units = "days since {}-{}-01 00:00:00".format(start_date.year, start_date.month)
     time.cartesian_axis = "T"
 
     f.close()
 
 def write_nemo_output_at_time(filename, var_name, var_longname, var_units,
-                              var_data, time_idx):
+                              var_data, time_idx, time_pt):
 
     with nc.Dataset(filename, 'r+') as f:
         if not f.variables.has_key(var_name):
@@ -97,3 +99,4 @@ def write_nemo_output_at_time(filename, var_name, var_longname, var_units,
 
         var = f.variables[var_name]
         var[time_idx, :] = var_data[:]
+        f.variables['time'][time_idx] = time_pt
