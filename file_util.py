@@ -101,4 +101,4 @@ def write_nemo_output_at_time(filename, var_name, var_longname, var_units,
 
         var = f.variables[var_name]
         var[time_idx, :] = var_data[:]
-        f.variables['time'][time_idx] = time_pt
+        f.variables['time_counter'][time_idx] = time_pt

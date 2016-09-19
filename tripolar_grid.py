@@ -33,11 +33,16 @@ class TripolarGrid(Grid):
 
             tripolar_mask = np.zeros_like(tripolar_grid.mask, dtype=bool)
             tripolar_mask[tripolar_grid.mask[:] == 0.0] = True
+            assert len(tripolar_mask.shape) == 3
 
             # Drop the mask in, with new rows being masked by default.
             mask = np.ndarray((levels.shape[0], y_t.shape[0], y_t.shape[1]), dtype=bool)
             mask[:] = True
-            mask[levels.shape[0]-tripolar_grid.mask.shape[0]:, new_rows:, :] = tripolar_mask[:]
+            diff = abs(mask.shape[0] - tripolar_grid.mask.shape[0])
+            if mask.shape[0] > tripolar_mask.shape[0]:
+                mask[:-diff, new_rows:, :] = tripolar_mask[:]
+            else:
+                mask[:, new_rows:, :] = tripolar_mask[:-diff, :, :]
         else:
             x_t = tripolar_grid.x_t[:]
             y_t = tripolar_grid.x_y[:]
