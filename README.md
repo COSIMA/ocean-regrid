@@ -15,10 +15,9 @@ ESMF releases can be found here: http://www.earthsystemmodeling.org/download/dat
 
 Regrid ORAS4 reanalysis to MOM 0.25 degree tripolar grid:
 ```
-$ ./regrid.py ORAS4 coords_T.nc coords_T.nc thetao_oras4_1m_2014_grid_T.nc thetao MOM ocean_hgrid.nc ocean_vgrid.nc ocean_out.nc temp --dest_mask ocean_mask.nc
+$ ./regrid.py ORAS4 coords_T.nc coords_T.nc thetao_oras4_1m_2014_grid_T.nc thetao \
+        MOM ocean_hgrid.nc ocean_vgrid.nc ocean_out.nc temp --dest_mask ocean_mask.nc
 ```
-
-# Testing
 
 # How it works
 
@@ -29,8 +28,4 @@ $ ./regrid.py ORAS4 coords_T.nc coords_T.nc thetao_oras4_1m_2014_grid_T.nc theta
 3. The source dataset is then regridded using weights calculated with ESMF_RegridWeightGen. Various regridding schemes are supported includeing distance weighted nearest neighbour, bilinear and conservative.
 
 4. The destination land sea mask is applied.
-
-# Example output
-
-![MOM IC based on GODAS reanalysis](https://raw.github.com/nicjhan/ocean-ic/master/examples/MOM_IC_GODAS.png)
 

@@ -19,9 +19,14 @@ class OrasGrid(Grid):
 
             # Select points from double density horizontal grid. Only
             # need t-points.
-            x_t = f.variables['nav_lon'][:]
-            y_t = f.variables['nav_lat'][:]
-            z = f.variables['deptht'][:]
+            try:
+                x_t = f.variables['nav_lon'][:]
+                y_t = f.variables['nav_lat'][:]
+                z = f.variables['deptht'][:]
+            except KeyError:
+                x_t = f.variables['lon'][:]
+                y_t = f.variables['lat'][:]
+                z = f.variables['depth'][:]
 
             mask = np.zeros_like(f.variables['tmask'], dtype=bool)
             mask[f.variables['tmask'][:] == 0.0] = True

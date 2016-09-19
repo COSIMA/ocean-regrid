@@ -246,7 +246,8 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
     # Creating the remapping weights files is a computationally intensive
     # task. For simplicity call an external tool for this.
     if regrid_weights is None or not os.path.exists(regrid_weights):
-        regrid_weights = 'regrid_weights.nc'
+        if regrid_weights is None:
+            regrid_weights = 'regrid_weights.nc'
         mpi = []
         if use_mpi:
             mpi = ['mpirun', '-n', '8']
@@ -324,14 +325,16 @@ def main():
     parser.add_argument('--use_mpi', action='store_true', default=False,
                         help="""Use MPI to when calculating the regridding weights.
                                This will speed up the calculation considerably.""")
+    parser.add_argument('--append', default=False, action='store_true',
+                        help='Append to destination file.')
     args = parser.parse_args()
 
     assert args.dest_name == 'MOM' or args.dest_name == 'NEMO'
     assert args.src_name == 'GODAS' or args.src_name == 'ORAS4'
 
-    if os.path.exists(args.dest_data_file):
+    if os.path.exists(args.dest_data_file) and not args.append:
         print("Output file {} already exists, ".format(args.dest_data_file) + \
-              "please move or delete.", file=sys.stderr)
+              "please move use the --append option.", file=sys.stderr)
         return 1
 
     ret = do_regridding(args.src_name, args.src_hgrid, args.src_vgrid,
