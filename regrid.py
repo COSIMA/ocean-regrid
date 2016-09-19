@@ -75,6 +75,9 @@ def extend_to_global(var, src_grid, global_grid, arctic_filler=None):
     tmp = np.zeros((global_grid.num_levels, global_grid.num_lat_points,
                     global_grid.num_lon_points))
     new_data = np.ma.array(tmp, mask=global_grid.mask, copy=True)
+    # Mask everything by default. The code below fills masked values with
+    # nearest neighbour.
+    new_data.mask[:] = True
 
     # Drop obs data into new grid at correct location
     lat_min_idx = find_nearest_index(global_grid.y_t[:, 0], np.min(src_grid.y_t[:]))
@@ -221,7 +224,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
     if src_name == 'ORAS4':
         src_grid = OrasGrid(src_hgrid, description='ORAS4')
     else:
-        src_grid = GodasGrid(src_data_file, description='GODAS')
+        src_grid = GodasGrid(src_hgrid, description='GODAS')
 
     # An extra, source-like grids but extended to the whole globe, including
     # maximum depth. The reanalysis grids have limited domain and/or depth.
