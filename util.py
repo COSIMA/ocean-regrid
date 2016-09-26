@@ -54,10 +54,16 @@ def get_time_origin(filename):
     datetime.date object.
     """
 
+    date_search_strings = ['\d{4}-\d{2}-\d{2}','\d{4}-\d{1}-\d{2}',
+                            '\d{4}-\d{2}-\d{1}','\d{4}-\d{1}-\d{1}']
+
     with nc.Dataset(filename) as f:
         time_var = f.variables['time']
         assert('days since' in time_var.units)
-        m = re.search('\d{4}-\d{2}-\d{2}', time_var.units)
+        for ds in date_search_strings:
+            m = re.search(ds, time_var.units)
+            if m is not None:
+                break
         assert(m is not None)
         date = dt.datetime.strptime(m.group(0), '%Y-%m-%d')
 
