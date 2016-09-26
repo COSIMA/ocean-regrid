@@ -203,7 +203,8 @@ def check_dependencies(use_mpi):
 
 def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
-                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False):
+                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False, 
+                  ESMF_RegridWeightGen='ESMF_RegridWeightGen'):
 
     if not check_dependencies(use_mpi):
         return None
@@ -255,7 +256,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         if use_mpi:
             mpi = ['mpirun', '-n', '8']
 
-        ret = sp.call(mpi + ['ESMF_RegridWeightGen',
+        ret = sp.call(mpi + [ESMF_RegridWeightGen,
                        '-s', global_src_grid_scrip,
                        '-d', dest_grid_scrip,
                        '-m', 'bilinear', '-w', regrid_weights])
