@@ -293,16 +293,25 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         dest_data = regrid(regrid_weights, src_data, dest_grid)
 
         # Write out
+        try:
+            units = src_var.units
+        except AttributeError:
+            units = ''
+        try:
+            long_name = src_var.long_name
+        except AttributeError:
+            long_name = ''
+
         if dest_name == 'MOM':
             # Apply ocean mask.
             if dest_grid.mask is not None:
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
                 dest_data = np.ma.array(dest_data, mask=mask)
-            write_mom_output_at_time(dest_data_file, dest_var, src_var.long_name,
-                                     src_var.units, dest_data, t_idx, t_pt)
+            write_mom_output_at_time(dest_data_file, dest_var, long_name,
+                                     units, dest_data, t_idx, t_pt)
         else:
-            write_nemo_output_at_time(dest_data_file, dest_var, src_var.long_name,
-                                      src_var.units, dest_data, t_idx, t_pt)
+            write_nemo_output_at_time(dest_data_file, dest_var, long_name,
+                                      units, dest_data, t_idx, t_pt)
 
     f.close()
     return regrid_weights
