@@ -184,11 +184,12 @@ def regrid(regrid_weights, src_data, dest_grid):
 
     return dest_data
 
-def check_dependencies(use_mpi):
+def check_dependencies(use_mpi, ESMF_RegridWeightGen):
 
-    ret = sp.call(['which', 'ESMF_RegridWeightGen'])
-    if ret:
-        print('\n Error: makeic.py program dependson on ESMF_RegridWeightGen which is not installed.\n',
+    retA = sp.call(['which', ESMF_RegridWeightGen])
+    retB = sp.call(['which', 'ESMF_RegridWeightGen'])
+    if retA and retB:
+        print("\n Error: makeic.py program dependson on ESMF_RegridWeightGen which can't be found.\n",
                file=sys.stderr)
         return False
 
@@ -206,7 +207,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                   dest_mask=None, month=None, regrid_weights=None, use_mpi=False, 
                   ESMF_RegridWeightGen='ESMF_RegridWeightGen'):
 
-    if not check_dependencies(use_mpi):
+    if not check_dependencies(use_mpi, ESMF_RegridWeightGen):
         return None
 
     # Destination grid
@@ -255,6 +256,9 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         mpi = []
         if use_mpi:
             mpi = ['mpirun', '-n', '8']
+
+        if not os.path.exists(ESMF_RegridWeightGen):
+            ESMF_RegridWeightGen = 'ESMF_RegridWeightGen'
 
         ret = sp.call(mpi + [ESMF_RegridWeightGen,
                        '-s', global_src_grid_scrip,
