@@ -16,7 +16,14 @@ class GodasGrid(Grid):
             # need t-points.
             x_t = f.variables['lon'][:]
             y_t = f.variables['lat'][:]
-            z = f.variables['level'][:]
-            mask = f.variables['pottmp'][0, :].mask[:]
+            try:
+                z = f.variables['level'][:]
+            except KeyError:
+                z = f.variables['depth'][:]
+
+            try:
+                mask = f.variables['pottmp'][0, :].mask[:]
+            except KeyError:
+                mask = f.variables['POT'][0, :].mask[:]
 
         super(GodasGrid, self).__init__(x_t, y_t, z, mask, description)

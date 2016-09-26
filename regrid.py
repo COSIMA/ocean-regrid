@@ -184,10 +184,11 @@ def regrid(regrid_weights, src_data, dest_grid):
 
     return dest_data
 
-def check_dependencies(use_mpi):
+def check_dependencies(use_mpi, ESMF_RegridWeightGen):
 
-    ret = sp.call(['which', 'ESMF_RegridWeightGen'])
-    if ret:
+    retA = sp.call(['which', ESMF_RegridWeightGen])
+    retB = sp.call(['which', 'ESMF_RegridWeightGen'])
+    if retA and retB:
         print('\n Error: regrid.py program depends on on ESMF_RegridWeightGen which is not installed.\n',
                file=sys.stderr)
         return False
@@ -203,9 +204,10 @@ def check_dependencies(use_mpi):
 
 def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
-                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False):
+                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False, 
+                  ESMF_RegridWeightGen='ESMF_RegridWeightGen'):
 
-    if not check_dependencies(use_mpi):
+    if not check_dependencies(use_mpi, ESMF_RegridWeightGen):
         return None
 
     # Destination grid
@@ -255,7 +257,10 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         if use_mpi:
             mpi = ['mpirun', '-n', '8']
 
-        ret = sp.call(mpi + ['ESMF_RegridWeightGen',
+        if not os.path.exists(ESMF_RegridWeightGen):
+            ESMF_RegridWeightGen = 'ESMF_RegridWeightGen'
+
+        ret = sp.call(mpi + [ESMF_RegridWeightGen,
                        '-s', global_src_grid_scrip,
                        '-d', dest_grid_scrip,
                        '-m', 'bilinear', '-w', regrid_weights])
@@ -288,16 +293,25 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         dest_data = regrid(regrid_weights, src_data, dest_grid)
 
         # Write out
+        try:
+            units = src_var.units
+        except AttributeError:
+            units = ''
+        try:
+            long_name = src_var.long_name
+        except AttributeError:
+            long_name = ''
+
         if dest_name == 'MOM':
             # Apply ocean mask.
             if dest_grid.mask is not None:
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
                 dest_data = np.ma.array(dest_data, mask=mask)
-            write_mom_output_at_time(dest_data_file, dest_var, src_var.long_name,
-                                     src_var.units, dest_data, t_idx, t_pt)
+            write_mom_output_at_time(dest_data_file, dest_var, long_name,
+                                     units, dest_data, t_idx, t_pt)
         else:
-            write_nemo_output_at_time(dest_data_file, dest_var, src_var.long_name,
-                                      src_var.units, dest_data, t_idx, t_pt)
+            write_nemo_output_at_time(dest_data_file, dest_var, long_name,
+                                      units, dest_data, t_idx, t_pt)
 
     f.close()
     return regrid_weights
