@@ -188,7 +188,7 @@ def check_dependencies(use_mpi):
 
     ret = sp.call(['which', 'ESMF_RegridWeightGen'])
     if ret:
-        print('\n Error: makeic.py program dependson on ESMF_RegridWeightGen which is not installed.\n',
+        print('\n Error: regrid.py program depends on on ESMF_RegridWeightGen which is not installed.\n',
                file=sys.stderr)
         return False
 
