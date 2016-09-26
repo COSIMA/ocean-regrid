@@ -205,7 +205,7 @@ def check_dependencies(use_mpi, ESMF_RegridWeightGen):
 def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
                   dest_mask=None, month=None, regrid_weights=None, use_mpi=False, 
-                  ESMF_RegridWeightGen='ESMF_RegridWeightGen'):
+                  ESMF_RegridWeightGen='./ESMF_RegridWeightGen'):
 
     if not check_dependencies(use_mpi, ESMF_RegridWeightGen):
         return None
