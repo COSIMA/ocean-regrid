@@ -1,0 +1,38 @@
+name: regrid
+channels: !!python/tuple
+- !!python/unicode 'defaults'
+dependencies:
+- curl=7.49.0=1
+- enum34=1.1.6=py27_0
+- funcsigs=1.0.2=py27_0
+- hdf4=4.2.12=0
+- hdf5=1.8.17=1
+- jpeg=8d=1
+- libgfortran=3.0.0=1
+- libnetcdf=4.4.1=0
+- llvmlite=0.13.0=py27_0
+- mkl=11.3.3=0
+- netcdf4=1.2.4=np111py27_0
+- numba=0.28.1=np111py27_0
+- numpy=1.11.1=py27_0
+- openssl=1.0.2j=0
+- pip=8.1.2=py27_0
+- py=1.4.31=py27_0
+- pytest=2.9.2=py27_0
+- python=2.7.12=1
+- readline=6.2=2
+- scipy=0.18.1=np111py27_0
+- setuptools=27.2.0=py27_0
+- sh=1.11=py27_0
+- singledispatch=3.4.0.3=py27_0
+- six=1.10.0=py27_0
+- sqlite=3.13.0=0
+- tk=8.5.18=0
+- wheel=0.29.0=py27_0
+- zlib=1.2.8=3
+- pip:
+  - f90nml==0.9.1
+  - payu==0.6
+  - pyyaml==3.11
+prefix: /home/599/nah599/anaconda2/envs/regrid
+

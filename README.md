@@ -2,21 +2,51 @@
 
 Regrid global ocean data in 3d. Suppurts GODAS, ORAS4 reanalysis grids and MOM, NEMO model grids. Handles missing data and grids with mismatched domains.
 
-# Dependencies
+# Build status
 
-This tool is written in Python and depends on many different Python packages. See section 'Install' below for instructions on how to download all of the Python dependencies. It also depends on
- [ESMF_RegridWeightGen](https://www.earthsystemcog.org/projects/regridweightgen/) program to perform regridding between non-rectilinear grids.
+[![Build Status](https://travis-ci.org/nicjhan/ocean-regrid.svg?branch=master)](https://travis-ci.org/nicjhan/ocean-regrid)
 
 # Install
 
-ESMF releases can be found here: http://www.earthsystemmodeling.org/download/data/releases.shtml
+## Python dependencies
+
+1. Download and install [Anaconda](https://www.continuum.io/downloads) for your platform.
+2. Install the [git](https://git-scm.com/) revision control system if you don't already have it.
+3. Download ocean-regrid:
+```{bash}
+$ git clone --recursive https://github.com/nicjhan/ocean-regrid.git
+$ cd ocean-regrid
+```
+4. Setup the Anaconda environment. This will download all the necessary Python packages.
+```{bash}
+$ conda env create -f regrid.yml
+$ source activate ocean
+```
+
+## ESMF dependencies
+
+Install ESMF_RegridWeightGen. ESMF releases can be found [here](http://www.earthsystemmodeling.org/download/data/releases.shtml).
+
+There is a bash script contrib/build_esmf.sh which the testing system uses to build ESMF. This may be useful in addition to the ESMF installation docs.
 
 # Example Use
 
 Regrid ORAS4 reanalysis to MOM 0.25 degree tripolar grid:
 ```
-$ ./regrid.py ORAS4 coords_T.nc coords_T.nc thetao_oras4_1m_2014_grid_T.nc thetao \
-        MOM ocean_hgrid.nc ocean_vgrid.nc ocean_out.nc temp --dest_mask ocean_mask.nc
+$ cd test
+$ wget http://s3-ap-southeast-2.amazonaws.com/dp-drop/ocean-regrid/test/test_data.tar.gz
+$ tar zxvf test_data.tar.gz
+$ cd test_data/input
+$ ../../../regrid.py ORAS4 coords_T.nc coords_T.nc thetao_oras4_1m_2014_grid_T.nc thetao \
+    MOM ocean_hgrid.nc ocean_vgrid.nc mom_oras4_temp.nc temp --dest_mask ocean_mask.nc
+$ ncview mom_oras4_temp.nc
+```
+
+OR:
+
+```
+$ python -m pytest
+$ ncview test/test_data/output/mom_oras4_temp.nc
 ```
 
 # How it works

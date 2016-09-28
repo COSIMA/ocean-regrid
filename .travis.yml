@@ -8,18 +8,18 @@ before_install:
   - sudo apt-get install libnetcdf-dev gfortran -y
 
 install:
-#  - wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-#  - bash miniconda.sh -b -p $HOME/miniconda
-#  - export PATH="$HOME/miniconda/bin:$PATH"
-#  - hash -r
-#  - conda config --set always_yes yes --set changeps1 no
-#  - conda update -q conda
-#  - conda info -a
-#
-#  - conda env create -f grids.yml
-#  - source activate grids
-   - cd contrib
-   - source build_esmf.sh
-   - cd ../
+  - wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
 
-script: which ESMF_RegridWeightGen
+  - conda env create -f grids.yml
+  - source activate grids
+  - cd contrib
+  - source build_esmf.sh
+  - cd ../
+
+script: python -m pytest
