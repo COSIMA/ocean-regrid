@@ -286,6 +286,11 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
     # Do regridding on each time point.
     f = nc.Dataset(src_data_file)
     src_var = f.variables[src_var]
+    if src_name == 'ORAS4':
+        # FIXME: ORAS4 hack to deal with duplicate rows/columns
+        src_data = src_grid.fix_data_shape(src_var[:])
+    else:
+        src_data = src_var[:]
 
     if month is not None:
         time_idxs = [month - 1]
@@ -294,9 +299,8 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
     time_points = f.variables['time'][time_idxs]
 
     for t_idx, t_pt in zip(time_idxs, time_points):
-        src_data = src_var[t_idx, :]
-        src_data = extend_src_data(src_data, src_grid, global_src_grid)
-        dest_data = regrid(regrid_weights, src_data, dest_grid)
+        ext_src_data = extend_src_data(src_data[t_idx, :], src_grid, global_src_grid)
+        dest_data = regrid(regrid_weights, ext_src_data, dest_grid)
 
         # Write out
         try:

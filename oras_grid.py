@@ -17,21 +17,45 @@ class OrasGrid(Grid):
 
         with nc.Dataset(grid_def) as f:
 
-            # Select points from double density horizontal grid. Only
-            # need t-points.
+            # The oras grid is unusual. It has one duplicate row and two
+            # duplicate columns. We cut these off.
             try:
-                x_t = f.variables['nav_lon'][:]
-                y_t = f.variables['nav_lat'][:]
+                x_t = f.variables['nav_lon'][:-1, :-2]
+                y_t = f.variables['nav_lat'][:-1, :-2]
                 z = f.variables['deptht'][:]
             except KeyError:
-                x_t = f.variables['lon'][:]
-                y_t = f.variables['lat'][:]
+                x_t = f.variables['lon'][:-1, :-2]
+                y_t = f.variables['lat'][:-1, :-2]
                 z = f.variables['depth'][:]
 
-            mask = np.zeros_like(f.variables['tmask'], dtype=bool)
-            mask[f.variables['tmask'][:] == 0.0] = True
+            mask = np.zeros_like(f.variables['tmask'][:, :-1, :-2], dtype=bool)
+            mask[f.variables['tmask'][:, :-1, :-2] == 0.0] = True
 
         super(OrasGrid, self).__init__(x_t, y_t, z, mask, description)
+
+
+    def fix_data_shape(self, data_array):
+        """
+        Since the ORAS grid has had duplicate rows and columns cut off we need
+        to do the same for the data. FIXME: better way to do this.
+        """
+
+        assert len(data_array.shape) >= 2 and len(data_array.shape) <= 4
+
+        if len(data_array.shape) == 4:
+            new_array = data_array[:, :, :-1, :-2]
+            assert(new_array.shape[2] == self.x_t.shape[0])
+            assert(new_array.shape[3] == self.x_t.shape[1])
+        elif len(data_array.shape) == 3:
+            new_array = data_array[:, :-1, :-2]
+            assert(new_array.shape[1] == self.x_t.shape[0])
+            assert(new_array.shape[2] == self.x_t.shape[1])
+        else:
+            new_array = data_array[:-1, :-2]
+            assert(new_array.shape[0] == self.x_t.shape[0])
+            assert(new_array.shape[1] == self.x_t.shape[1])
+
+        return new_array
 
     def make_corners(self):
         raise exceptions.NotImplementedError

@@ -58,16 +58,17 @@ class TripolarGrid(Grid):
         dx_half = np.empty_like(x)
         dy_half = np.empty_like(x)
 
-        dx_half[:,1:] = (x[:, 1:] - x[:, 0:-1]) / 2.0
-        dy_half[1:,:] = (y[1:, :] - y[0:-1, :]) / 2.0
+        dx_half[:, :-1] = abs((x[:, 1:] - x[:, 0:-1])) / 2.0
+        dy_half[:-1, :] = abs((y[1:, :] - y[0:-1, :])) / 2.0
 
-        # Need to extend South
-        dy_half[0, 1:] = dy_half[1, 1:]
-        dx_half[0, 1:] = dx_half[1, 1:]
+        # Need to fill in dx in East
+        dx_half[:, -1] = dx_half[:, -2]
 
-        # and West
-        dy_half[:, 0] = dy_half[:, 1]
-        dx_half[:, 0] = dx_half[:, 1]
+        # Fill in dy in the North
+        dy_half[-1, :] = dy_half[-2, :]
+
+        assert(np.min(abs(dx_half) > 0))
+        assert(np.min(abs(dy_half) > 0))
 
         clon = np.empty((self.num_lat_points, self.num_lon_points, 4))
         clon[:] = np.NAN
