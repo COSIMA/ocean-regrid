@@ -50,15 +50,15 @@ def regrid_columns(data, src_grid, dest_grid):
     # Iterate through columns and regrid each.
     for lat in range(data.shape[1]):
         for lon in range(data.shape[2]):
-            if np.all(src_grid.mask[:, lat, lon]):
+            if src_grid.mask[0, lat, lon]:
                 continue
-            if np.any(src_grid.mask[:, lat, lon]):
-                # Masked values expected to be at depth. Find these and fill
-                # with nearest neighbour.
-                for d in range(data.shape[0]-2, 0, -1):
-                    if (not src_grid.mask[d, lat, lon]) and \
-                            src_grid.mask[d+1, lat, lon]:
-                        data[d:, lat, lon] = data[d, lat, lon]
+
+            # Masked values expected to be at depth. Find these and fill
+            # with nearest neighbour.
+            for d in range(data.shape[0]-2, -1, -1):
+                if (not src_grid.mask[d, lat, lon]) and \
+                        src_grid.mask[d+1, lat, lon]:
+                    data[d:, lat, lon] = data[d, lat, lon]
 
             # 1d linear interpolation/extrapolation
             new_data[:, lat, lon] = interp(dest_grid.z, src_grid.z, data[:, lat, lon])
