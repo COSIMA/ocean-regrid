@@ -30,9 +30,5 @@ dependencies:
 - tk=8.5.18=0
 - wheel=0.29.0=py27_0
 - zlib=1.2.8=3
-- pip:
-  - f90nml==0.9.1
-  - payu==0.6
-  - pyyaml==3.11
 prefix: /home/599/nah599/anaconda2/envs/regrid
 
