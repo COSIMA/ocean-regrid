@@ -255,11 +255,22 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         if use_mpi:
             mpi = ['mpirun', '-n', '8']
 
-        ret = sp.call(mpi + ['ESMF_RegridWeightGen',
-                       '-s', global_src_grid_scrip,
-                       '-d', dest_grid_scrip,
-                       '-m', 'bilinear', '-w', regrid_weights])
-        assert(ret == 0)
+        try:
+            sp.check_output(mpi + ['ESMF_RegridWeightGen',
+                                   '-s', global_src_grid_scrip,
+                                   '-d', dest_grid_scrip,
+                                   '-m', 'bilinear', '-w', regrid_weights])
+        except sp.CalledProcessError, e:
+            print("Error: ESMF_RegridWeightGen failed return code {}".format(e.returncode),
+                  file=sys.stderr)
+            print(e.output, file=sys.stderr)
+            log = 'PET0.RegridWeightGen.Log'
+            if os.path.exists(log):
+                print('Contents of {}:'.format(log), file=sys.stderr)
+                with open(log) as f:
+                    print(f.read(), file=sys.stderr)
+            return None
+
         assert(os.path.exists(regrid_weights))
 
     # Create output file
