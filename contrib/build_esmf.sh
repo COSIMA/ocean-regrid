@@ -13,6 +13,6 @@ export ESMF_NETCDF_LIBS="-lnetcdff -lnetcdf"
 make
 cd src/apps/ESMF_RegridWeightGen
 make
-cd ../../../../../
-cp contrib/esmf/apps/appsO/*/ESMF_RegridWeightGen contrib/bin/
-export PATH=$(pwd)/contrib/bin:$PATH
+cd ../../../../
+cp esmf/apps/appsO/*/ESMF_RegridWeightGen bin/
+export PATH=$(pwd)/bin:$PATH
