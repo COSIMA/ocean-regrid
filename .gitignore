@@ -1,3 +1,10 @@
+
+test/*.gz
+test/test_data
+test/.cache
+
+.cache
+
 *.pyc
 *.nc
 *.RegridWeightGen.Log

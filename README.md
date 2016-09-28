@@ -20,7 +20,7 @@ $ cd ocean-regrid
 4. Setup the Anaconda environment. This will download all the necessary Python packages.
 ```{bash}
 $ conda env create -f regrid.yml
-$ source activate ocean
+$ source activate regrid
 ```
 
 ## ESMF dependencies
