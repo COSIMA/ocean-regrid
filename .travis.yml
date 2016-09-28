@@ -16,7 +16,7 @@ install:
   - conda update -q conda
   - conda info -a
 
-  - conda env create -f grids.yml
+  - conda env create -f regrid.yml
   - source activate grids
   - cd contrib
   - source build_esmf.sh
