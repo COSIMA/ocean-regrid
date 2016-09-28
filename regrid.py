@@ -184,11 +184,10 @@ def regrid(regrid_weights, src_data, dest_grid):
 
     return dest_data
 
-def check_dependencies(use_mpi, ESMF_RegridWeightGen):
+def check_dependencies(use_mpi):
 
-    retA = sp.call(['which', ESMF_RegridWeightGen])
-    retB = sp.call(['which', 'ESMF_RegridWeightGen'])
-    if retA and retB:
+    ret = sp.call(['which', 'ESMF_RegridWeightGen'])
+    if ret:
         print('\n Error: regrid.py program depends on on ESMF_RegridWeightGen which is not installed.\n',
                file=sys.stderr)
         return False
@@ -204,10 +203,9 @@ def check_dependencies(use_mpi, ESMF_RegridWeightGen):
 
 def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
-                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False, 
-                  ESMF_RegridWeightGen='ESMF_RegridWeightGen'):
+                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False):
 
-    if not check_dependencies(use_mpi, ESMF_RegridWeightGen):
+    if not check_dependencies(use_mpi):
         return None
 
     # Destination grid
@@ -257,10 +255,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         if use_mpi:
             mpi = ['mpirun', '-n', '8']
 
-        if not os.path.exists(ESMF_RegridWeightGen):
-            ESMF_RegridWeightGen = 'ESMF_RegridWeightGen'
-
-        ret = sp.call(mpi + [ESMF_RegridWeightGen,
+        ret = sp.call(mpi + ['ESMF_RegridWeightGen',
                        '-s', global_src_grid_scrip,
                        '-d', dest_grid_scrip,
                        '-m', 'bilinear', '-w', regrid_weights])
