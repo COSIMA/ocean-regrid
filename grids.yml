@@ -1,0 +1,24 @@
+name: grids
+dependencies:
+- curl=7.49.0=1
+- hdf4=4.2.12=0
+- hdf5=1.8.17=1
+- jpeg=8d=1
+- libnetcdf=4.4.1=0
+- mkl=11.3.3=0
+- netcdf4=1.2.4=np111py27_0
+- numpy=1.11.1=py27_0
+- openssl=1.0.2i=0
+- pip=8.1.2=py27_0
+- py=1.4.31=py27_0
+- pytest=2.9.2=py27_0
+- python=2.7.12=1
+- readline=6.2=2
+- setuptools=27.2.0=py27_0
+- sh=1.11=py27_0
+- sqlite=3.13.0=0
+- tk=8.5.18=0
+- wheel=0.29.0=py27_0
+- zlib=1.2.8=3
+prefix: /home/599/nah599/anaconda2/envs/grids
+
