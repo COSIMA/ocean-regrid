@@ -1,4 +1,5 @@
 
+import sys
 import netCDF4 as nc
 from mom_grid import MomGrid
 
@@ -48,7 +49,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     f.close()
 
 def write_mom_output_at_time(filename, var_name, var_longname, var_units,
-                             var_data, time_idx, time_pt):
+                             var_data, time_idx, time_pt, write_ic=False):
 
     with nc.Dataset(filename, 'r+') as f:
         if not f.variables.has_key(var_name):
@@ -60,8 +61,13 @@ def write_mom_output_at_time(filename, var_name, var_longname, var_units,
             var.units = var_units
 
         var = f.variables[var_name]
-        var[time_idx, :] = var_data[:]
-        f.variables['time'][time_idx] = time_pt
+
+        if write_ic:
+            var[0, :] = var_data[:]
+            f.variables['time'][0] = time_pt
+        else:
+            var[time_idx, :] = var_data[:]
+            f.variables['time'][time_idx] = time_pt
 
 
 def create_nemo_output(ocean_grid, filename, start_date, history):
@@ -91,7 +97,7 @@ def create_nemo_output(ocean_grid, filename, start_date, history):
     f.close()
 
 def write_nemo_output_at_time(filename, var_name, var_longname, var_units,
-                              var_data, time_idx, time_pt):
+                              var_data, time_idx, time_pt, write_ic=False):
 
     with nc.Dataset(filename, 'r+') as f:
         if not f.variables.has_key(var_name):
@@ -100,5 +106,9 @@ def write_nemo_output_at_time(filename, var_name, var_longname, var_units,
             var.units = var_units
 
         var = f.variables[var_name]
-        var[time_idx, :] = var_data[:]
-        f.variables['time_counter'][time_idx] = time_pt
+        if write_ic:
+            var[0, :] = var_data[:]
+            f.variables['time_counter'][0] = time_pt
+        else:
+            var[time_idx, :] = var_data[:]
+            f.variables['time_counter'][time_idx] = time_pt

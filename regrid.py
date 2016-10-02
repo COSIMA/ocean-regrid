@@ -203,10 +203,20 @@ def check_dependencies(use_mpi):
 
 def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
-                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False):
+                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False,
+                  write_ic=False):
 
     if not check_dependencies(use_mpi):
         return None
+
+    filenames = [src_hgrid, src_vgrid, src_data_file, dest_hgrid, dest_vgrid]
+    if dest_mask is not None:
+        filenames.append(dest_mask)
+    if regrid_weights is not None:
+        filenames.append(regrid_weights)
+
+    if check_files(filenames):
+        return None;
 
     # Destination grid
     if dest_name == 'MOM':
@@ -318,13 +328,21 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
                 dest_data = np.ma.array(dest_data, mask=mask)
             write_mom_output_at_time(dest_data_file, dest_var, long_name,
-                                     units, dest_data, t_idx, t_pt)
+                                     units, dest_data, t_idx, t_pt, write_ic)
         else:
             write_nemo_output_at_time(dest_data_file, dest_var, long_name,
-                                      units, dest_data, t_idx, t_pt)
+                                      units, dest_data, t_idx, t_pt, write_ic)
 
     f.close()
     return regrid_weights
+
+def check_files(filenames):
+
+    for filename in filenames:
+        if not os.path.exists(filename):
+            print("File {} not found, please check it's location.".format(filename),
+                    file=sys.stderr)
+            return 1
 
 def main():
 
@@ -358,6 +376,7 @@ def main():
 
     assert args.dest_name == 'MOM' or args.dest_name == 'NEMO'
     assert args.src_name == 'GODAS' or args.src_name == 'ORAS4'
+
 
     if os.path.exists(args.dest_data_file) and not args.append:
         print("Output file {} already exists, ".format(args.dest_data_file) + \
