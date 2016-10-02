@@ -22,4 +22,4 @@ install:
   - source build_esmf.sh
   - cd ../
 
-script: python -m pytest
+script: python -m pytest test/
