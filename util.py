@@ -59,13 +59,13 @@ def get_time_origin(filename):
 
     with nc.Dataset(filename) as f:
         time_var = f.variables['time']
-        assert 'days since' in time_var.units,
+        assert 'days since' in time_var.units, \
             "Time units doesn't have expected format: {}".format(time_var.units)
         for ds in date_search_strings:
             m = re.search(ds, time_var.units)
             if m is not None:
                 break
-        assert(m is not None)
+        assert m is not None 
         date = dt.datetime.strptime(m.group(0), '%Y-%m-%d')
 
     return dt.date(date.year, date.month, date.day)
