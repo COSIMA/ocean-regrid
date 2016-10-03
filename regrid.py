@@ -32,38 +32,38 @@ GODAS_BERING_STRAIGHT = [416, 184]
 def find_nearest_index(array, value):
     return (np.abs(array - value)).argmin()
 
-def regrid_columns(data, src_grid, dest_grid):
+def regrid_columns(src_data, src_grid, dest_grid):
     """
     Regrid vertical columns of data from src to dest.
     """
 
-    assert len(data.shape) == 3
-    assert data.shape[0] == len(src_grid.z)
+    assert len(src_data.shape) == 3
+    assert src_data.shape[0] == len(src_grid.z)
 
     # This gets modified.
-    data = np.ma.copy(data)
+    src_data = np.ma.copy(src_data)
 
     # Create masked array of the correct shape.
-    tmp = np.zeros((len(dest_grid.z), data.shape[1], data.shape[2]))
+    tmp = np.zeros((len(dest_grid.z), src_data.shape[1], src_data.shape[2]))
     new_data = np.ma.array(tmp, mask=np.ones_like(tmp), copy=True)
 
     # Iterate through columns and regrid each.
-    for lat in range(data.shape[1]):
-        for lon in range(data.shape[2]):
+    for lat in range(src_data.shape[1]):
+        for lon in range(src_data.shape[2]):
             if src_grid.mask[0, lat, lon]:
                 continue
 
             # Masked values at depth and missing values in the mid ocean
             # (GODAS). Find these and fill with nearest neighbour.
-            ind = nd.distance_transform_edt(data[:, lat, lon].mask,
+            ind = nd.distance_transform_edt(src_grid.mask[:, lat, lon],
                                         return_distances=False,
                                         return_indices=True)
-            tmp = data[:, lat, lon]
+            tmp = src_data[:, lat, lon]
             tmp = tmp[tuple(ind)]
-            data[:, lat, lon] = tmp[:]
+            src_data[:, lat, lon] = tmp[:]
 
             # 1d linear interpolation/extrapolation
-            new_data[:, lat, lon] = interp(dest_grid.z, src_grid.z, data[:, lat, lon])
+            new_data[:, lat, lon] = interp(dest_grid.z, src_grid.z, src_data[:, lat, lon])
 
     return new_data
 
