@@ -215,8 +215,6 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
     filenames = [src_hgrid, src_vgrid, src_data_file, dest_hgrid, dest_vgrid]
     if dest_mask is not None:
         filenames.append(dest_mask)
-    if regrid_weights is not None:
-        filenames.append(regrid_weights)
 
     if check_files(filenames):
         return None;
