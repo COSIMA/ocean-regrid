@@ -53,12 +53,14 @@ def regrid_columns(data, src_grid, dest_grid):
             if src_grid.mask[0, lat, lon]:
                 continue
 
-            # Masked values expected to be at depth. Find these and fill
-            # with nearest neighbour.
-            for d in range(data.shape[0]-2, -1, -1):
-                if (not src_grid.mask[d, lat, lon]) and \
-                        src_grid.mask[d+1, lat, lon]:
-                    data[d:, lat, lon] = data[d, lat, lon]
+            # Masked values at depth and missing values in the mid ocean
+            # (GODAS). Find these and fill with nearest neighbour.
+            ind = nd.distance_transform_edt(data[:, lat, lon].mask,
+                                        return_distances=False,
+                                        return_indices=True)
+            tmp = data[:, lat, lon]
+            tmp = tmp[tuple(ind)]
+            data[:, lat, lon] = tmp[:]
 
             # 1d linear interpolation/extrapolation
             new_data[:, lat, lon] = interp(dest_grid.z, src_grid.z, data[:, lat, lon])
@@ -142,6 +144,7 @@ def extend_src_data(src_data, src_grid, global_src_grid):
         print('Filling Arctic with representational value ...')
         global_src_data = fill_arctic(src_data, global_src_data, src_grid,
                                       global_src_grid)
+
     return global_src_data
 
 
@@ -161,7 +164,7 @@ def apply_weights(src, dest_shape, n_s, n_b, row, col, s):
     return dest.reshape(dest_shape)
 
 
-def regrid(regrid_weights, src_data, dest_grid): 
+def regrid(regrid_weights, src_data, dest_grid):
     """
     Regrid a single time index of data.
     """
@@ -260,7 +263,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
     # task. For simplicity call an external tool for this.
     if regrid_weights is None or not os.path.exists(regrid_weights):
         if regrid_weights is None:
-            regrid_weights = 'regrid_weights.nc'
+            _, regrid_weights = tempfile.mkstemp(suffix='.nc')
         mpi = []
         if use_mpi:
             mpi = ['mpirun', '-n', '8']
@@ -311,6 +314,10 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
     for t_idx, t_pt in zip(time_idxs, time_points):
         ext_src_data = extend_src_data(src_data[t_idx, :], src_grid, global_src_grid)
         dest_data = regrid(regrid_weights, ext_src_data, dest_grid)
+
+        # FIXME: issue with regridding in bottom left corner of grid. This is
+        # masked in any case.
+        dest_data[np.where(dest_data <= np.min(ext_src_data))] = np.min(ext_src_data)
 
         # Write out
         try:
