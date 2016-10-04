@@ -187,6 +187,16 @@ def regrid(regrid_weights, src_data, dest_grid):
 
     return dest_data
 
+def smooth_all(data):
+
+    # Trye this
+    # sigma = (2, 10, 10)
+    sigma = 10
+
+    new_data = np.copy(data)
+    new_data[:, :, :] = nd.filters.gaussian_filter(data[:, :, :], sigma)
+    return new_data
+
 def check_dependencies(use_mpi):
 
     ret = sp.call(['which', 'ESMF_RegridWeightGen'])
@@ -250,12 +260,16 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
                                       dest_grid.z, description=description)
 
     # Write the source and destination grids out in SCRIP format. We override
-    # the src mask because we want to cover everything.
+    # the masks, we want to cover everything.
     _, global_src_grid_scrip = tempfile.mkstemp(suffix='.nc')
-    unmask_all = np.zeros_like(global_src_grid.mask, dtype=int)
-    global_src_grid.write_scrip(global_src_grid_scrip, mask=unmask_all)
+    global_src_grid.write_scrip(global_src_grid_scrip,
+            mask=np.zeros_like(global_src_grid.mask, dtype=int))
     _, dest_grid_scrip = tempfile.mkstemp(suffix='.nc')
-    dest_grid.write_scrip(dest_grid_scrip)
+    dest_grid.write_scrip(dest_grid_scrip,
+            mask=np.zeros_like(dest_grid.mask, dtype=int))
+
+    print('global_src_grid_scrip {}'.format(global_src_grid_scrip))
+    print('dest_grid_scrip {}'.format(dest_grid_scrip))
 
     # Creating the remapping weights files is a computationally intensive
     # task. For simplicity call an external tool for this.
@@ -316,6 +330,10 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         # FIXME: issue with regridding in bottom left corner of grid. This is
         # masked in any case.
         dest_data[np.where(dest_data <= np.min(ext_src_data))] = np.min(ext_src_data)
+
+        # FIXME: run a smoother to remove sharp edges associated with missing data.
+        if dest_name == 'MOM':
+            dest_data = smooth_all(dest_data, dest_name)
 
         # Write out
         try:

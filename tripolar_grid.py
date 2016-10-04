@@ -58,6 +58,8 @@ class TripolarGrid(Grid):
         dx_half = np.empty_like(x)
         dy_half = np.empty_like(x)
 
+        # FIXME: this way of making corners is wrong.
+
         dx_half[:, :-1] = abs((x[:, 1:] - x[:, 0:-1])) / 2.0
         dy_half[:-1, :] = abs((y[1:, :] - y[0:-1, :])) / 2.0
 
