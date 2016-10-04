@@ -333,7 +333,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
 
         # FIXME: run a smoother to remove sharp edges associated with missing data.
         if dest_name == 'MOM':
-            dest_data = smooth_all(dest_data, dest_name)
+            dest_data = smooth_all(dest_data)
 
         # Write out
         try:
