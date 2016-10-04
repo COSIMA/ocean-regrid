@@ -65,7 +65,7 @@ def get_time_origin(filename):
             m = re.search(ds, time_var.units)
             if m is not None:
                 break
-        assert m is not None 
+        assert m is not None
         date = dt.datetime.strptime(m.group(0), '%Y-%m-%d')
 
     return dt.date(date.year, date.month, date.day)
