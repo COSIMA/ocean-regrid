@@ -189,9 +189,8 @@ def regrid(regrid_weights, src_data, dest_grid):
 
 def smooth_all(data):
 
-    # Trye this
-    # sigma = (2, 10, 10)
-    sigma = 10
+    # Try this
+    sigma = (2, 5, 5)
 
     new_data = np.copy(data)
     new_data[:, :, :] = nd.filters.gaussian_filter(data[:, :, :], sigma)
