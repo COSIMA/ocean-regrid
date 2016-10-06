@@ -58,8 +58,6 @@ class TripolarGrid(Grid):
         dx_half = np.empty_like(x)
         dy_half = np.empty_like(x)
 
-        # FIXME: this way of making corners is wrong.
-
         dx_half[:, :-1] = abs((x[:, 1:] - x[:, 0:-1])) / 2.0
         dy_half[:-1, :] = abs((y[1:, :] - y[0:-1, :])) / 2.0
 
@@ -69,24 +67,35 @@ class TripolarGrid(Grid):
         # Fill in dy in the North
         dy_half[-1, :] = dy_half[-2, :]
 
-        assert(np.min(abs(dx_half) > 0))
-        assert(np.min(abs(dy_half) > 0))
+        # FIXME: this way of making corners is not ideal.
+        # Hacks
+        dx_half[:, 107] = dx_half[:, 108]
+        dx_half[np.where(dx_half > 2)] = 2.0
+
+        assert np.min(dx_half) > 0
+        assert np.min(dy_half) > 0
+
+        assert np.max(dx_half) <= 2
+        assert np.max(dy_half) <= 2
+
+        print('Max dx_half {}'.format(np.max(dx_half)))
+        print('Max dy_half {}'.format(np.max(dy_half)))
 
         clon = np.empty((self.num_lat_points, self.num_lon_points, 4))
         clon[:] = np.NAN
 
-        clon[:,:,0] = x - dx_half
-        clon[:,:,1] = x + dx_half
-        clon[:,:,2] = x + dx_half
-        clon[:,:,3] = x - dx_half
+        clon[:,:,0] = x - dx_half[:, :]
+        clon[:,:,1] = x + dx_half[:, :]
+        clon[:,:,2] = x + dx_half[:, :]
+        clon[:,:,3] = x - dx_half[:, :]
         assert(not np.isnan(np.sum(clon)))
 
         clat = np.empty((self.num_lat_points, self.num_lon_points, 4))
         clat[:] = np.NAN
-        clat[:,:,0] = y - dy_half
-        clat[:,:,1] = y - dy_half
-        clat[:,:,2] = y + dy_half
-        clat[:,:,3] = y + dy_half
+        clat[:,:,0] = y - dy_half[:, :]
+        clat[:,:,1] = y - dy_half[:, :]
+        clat[:,:,2] = y + dy_half[:, :]
+        clat[:,:,3] = y + dy_half[:, :]
         assert(not np.isnan(np.sum(clat)))
 
         self.clon_t = clon

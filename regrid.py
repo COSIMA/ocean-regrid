@@ -47,21 +47,21 @@ def regrid_columns(src_data, src_grid, dest_grid):
     tmp = np.zeros((len(dest_grid.z), src_data.shape[1], src_data.shape[2]))
     new_data = np.ma.array(tmp, mask=np.ones_like(tmp), copy=True)
 
-    # Iterate through columns and regrid each.
-    for lat in range(src_data.shape[1]):
-        for lon in range(src_data.shape[2]):
-            if src_grid.mask[0, lat, lon]:
-                continue
-
-            # Masked values at depth and missing values in the mid ocean
-            # (GODAS). Find these and fill with nearest neighbour.
-            ind = nd.distance_transform_edt(src_grid.mask[:, lat, lon],
+    # Step 1. At every level fill everything with nearest neighbour. This
+    # effectively removes bathymetry with the new (previously masked) deep
+    # points having values based on neighbours at the same depth. This will
+    # also remove missing values in the mid ocean (GODAS).
+    for level in range(src_data.shape[0]):
+        ind = nd.distance_transform_edt(src_grid.mask[level, :, :],
                                         return_distances=False,
                                         return_indices=True)
-            tmp = src_data[:, lat, lon]
-            tmp = tmp[tuple(ind)]
-            src_data[:, lat, lon] = tmp[:]
+        tmp = src_data[level, :, :]
+        tmp = tmp[tuple(ind)]
+        src_data[level, :, :] = tmp[:]
 
+    # Step 2. Iterate through columns and regrid each.
+    for lat in range(src_data.shape[1]):
+        for lon in range(src_data.shape[2]):
             # 1d linear interpolation/extrapolation
             new_data[:, lat, lon] = interp(dest_grid.z, src_grid.z, src_data[:, lat, lon])
 
@@ -190,7 +190,7 @@ def regrid(regrid_weights, src_data, dest_grid):
 def smooth_all(data):
 
     # Try this
-    sigma = (2, 5, 5)
+    sigma = (1, 2, 2)
 
     new_data = np.copy(data)
     new_data[:, :, :] = nd.filters.gaussian_filter(data[:, :, :], sigma)
@@ -313,6 +313,8 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
     if src_name == 'ORAS4':
         # FIXME: ORAS4 hack to deal with duplicate rows/columns
         src_data = src_grid.fix_data_shape(src_var[:])
+        # Also add mask to data
+        src_data = src_grid.apply_grid_mask(src_data)
     else:
         src_data = src_var[:]
 
@@ -331,7 +333,7 @@ def do_regridding(src_name, src_hgrid, src_vgrid, src_data_file, src_var,
         dest_data[np.where(dest_data <= np.min(ext_src_data))] = np.min(ext_src_data)
 
         # FIXME: run a smoother to remove sharp edges associated with missing data.
-        if dest_name == 'MOM':
+        if dest_name == 'MOM' and src_name == 'ORAS4' and write_ic:
             dest_data = smooth_all(dest_data)
 
         # Write out
