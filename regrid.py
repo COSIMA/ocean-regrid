@@ -334,7 +334,7 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
         dest_data[np.where(dest_data <= np.min(ext_src_data))] = np.min(ext_src_data)
 
         # FIXME: run a smoother to remove sharp edges associated with missing data.
-        if dest_name == 'MOM' and src_name == 'ORAS4' and write_ic:
+        if dest_name == 'MOM' and write_ic:
             dest_data = smooth_all(dest_data)
 
         # Write out

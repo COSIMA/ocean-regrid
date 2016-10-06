@@ -78,9 +78,6 @@ class TripolarGrid(Grid):
         assert np.max(dx_half) <= 2
         assert np.max(dy_half) <= 2
 
-        print('Max dx_half {}'.format(np.max(dx_half)))
-        print('Max dy_half {}'.format(np.max(dy_half)))
-
         clon = np.empty((self.num_lat_points, self.num_lon_points, 4))
         clon[:] = np.NAN
 
