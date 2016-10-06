@@ -13,7 +13,14 @@ def find_nearest_index(array, value):
 
 class OrasGrid(Grid):
 
-    def __init__(self, grid_def, description=''):
+    def __init__(self, grid_defs, description=''):
+
+        # FIXME: only support T grid for now.
+        grid_def = None
+        for gd in grid_defs:
+            if 'coordinates_grid_T.nc' in gd:
+                grid_def = gd
+        assert grid_def is not None
 
         with nc.Dataset(grid_def) as f:
 
