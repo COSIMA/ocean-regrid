@@ -8,9 +8,6 @@ import exceptions
 
 from grid import Grid
 
-def find_nearest_index(array, value):
-    return (np.abs(array - value)).argmin()
-
 class OrasGrid(Grid):
 
     def __init__(self, grid_defs, description=''):

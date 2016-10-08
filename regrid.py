@@ -32,34 +32,80 @@ GODAS_BERING_STRAIGHT = [416, 184]
 def find_nearest_index(array, value):
     return (np.abs(array - value)).argmin()
 
-def regrid_columns(src_data, src_grid, dest_grid):
+def regrid_columns(src_data, src_grid, dest_grid, temp_or_salt):
     """
     Regrid vertical columns of data from src to dest.
+
+    1. Fill in source bathymetry with nearest neighbours.
+    2. interpolate and extrapolate down so that dest columns are filled to the
+    bottom.
     """
 
+    assert temp_or_salt == 'temp' or temp_or_salt == 'salt'
     assert len(src_data.shape) == 3
     assert src_data.shape[0] == len(src_grid.z)
 
     # This gets modified.
     src_data = np.ma.copy(src_data)
+    src_data_a = np.ma.copy(src_data)
+    src_data_b = np.ma.copy(src_data)
 
     # Create masked array of the correct shape.
     tmp = np.zeros((len(dest_grid.z), src_data.shape[1], src_data.shape[2]))
     new_data = np.ma.array(tmp, mask=np.ones_like(tmp), copy=True)
 
-    # Step 1. At every level fill everything with nearest neighbour. This
+    # We need to fill in missing values in the source bathymetry. Do this in
+    # steps:
+    #   1a. fill with horizontal nearest neighbour so that deep point
+    #   have valued based on neighbours at the same depth.
+    #   1b. fill with nearest neighbour from above in the same column. Before
+    #   doing this make sure the top level is covered.
+    #   1c. for each grid cell choose the 'best' one from the above with the
+    #   intention of finding the most stable arrangement of the water column.
+
+    # 1a. At every level fill everything with nearest neighbour. This
     # effectively removes bathymetry with the new (previously masked) deep
-    # points having values based on neighbours at the same depth. This will
-    # also remove missing values in the mid ocean (GODAS).
+    # points having values based on neighbours at the same depth.
     for level in range(src_data.shape[0]):
         ind = nd.distance_transform_edt(src_grid.mask[level, :, :],
                                         return_distances=False,
                                         return_indices=True)
-        tmp = src_data[level, :, :]
+        tmp = src_data_b[level, :, :]
         tmp = tmp[tuple(ind)]
-        src_data[level, :, :] = tmp[:]
+        src_data_b[level, :, :] = tmp[:]
 
-    # Step 2. Iterate through columns and regrid each.
+    # 1b. First fill in the top level.
+    ind = nd.distance_transform_edt(src_grid.mask[0, :, :],
+                                   return_distances=False,
+                                   return_indices=True)
+    tmp = src_data_a[0, :, :]
+    tmp = tmp[tuple(ind)]
+    src_data_a[0, :, :] = tmp[:]
+
+    # Now fill in all missing values down the columns.
+    for lat in range(src_data.shape[1]):
+        for lon in range(src_data.shape[2]):
+            ind = nd.distance_transform_edt(src_grid.mask[:, lat, lon],
+                                            return_distances=False,
+                                            return_indices=True)
+        tmp = src_data_a[:, lat, lon]
+        tmp = tmp[tuple(ind)]
+        src_data_a[:, lat, lon] = tmp[:]
+
+    # 1c. combine the best of above. I'm not sure what's 'best'. I guess deeper
+    # water should be colder and more salty to make a more stable column.
+    if temp_or_salt == 'temp':
+        src_data[np.where(src_data_a[:] <= src_data_b[:])] = \
+            src_data_a[np.where(src_data_a[:] <= src_data_b[:])]
+        src_data[np.where(src_data_b[:] < src_data_a[:])] = \
+            src_data_b[np.where(src_data_b[:] < src_data_a[:])]
+    else:
+        src_data[np.where(src_data_a[:] >= src_data_b[:])] = \
+            src_data_a[np.where(src_data_a[:] >= src_data_b[:])]
+        src_data[np.where(src_data_b[:] > src_data_a[:])] = \
+            src_data_b[np.where(src_data_b[:] > src_data_a[:])]
+
+    # Step 2. Iterate through columns and regrid each to the bottom of the destination column.
     for lat in range(src_data.shape[1]):
         for lon in range(src_data.shape[2]):
             # 1d linear interpolation/extrapolation
@@ -126,14 +172,15 @@ def fill_arctic(src_data, global_data, src_grid, global_grid):
     return global_data
 
 
-def extend_src_data(src_data, src_grid, global_src_grid):
+def extend_src_data(src_data, src_grid, global_src_grid, temp_or_salt):
     """
     Extend data to go to full depth and cover global domain.
     """
 
     # Extend src to go to full depth
     print('Vertical regridding/extrapolation ...')
-    src_data = regrid_columns(src_data, src_grid, global_src_grid)
+    src_data = regrid_columns(src_data, src_grid, global_src_grid,
+                              temp_or_salt)
 
     # Now extend src to cover whole globe
     print('Extending obs to global domain ...')
@@ -212,6 +259,15 @@ def check_dependencies(use_mpi):
 
     return True
 
+def is_var_temp_or_salt(src_var, dest_var):
+
+    for v in [src_var.lower(), dest_var.lower()]:
+        if v == 'salt' or v == 'vosaline':
+            return 'salt'
+        if v == 'temp' or v == 'votemper' or v == 'pottmp':
+            return 'temp'
+
+
 def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
                   dest_mask=None, month=None, regrid_weights=None, use_mpi=False,
@@ -226,6 +282,8 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
 
     if check_files(filenames):
         return None;
+
+    temp_or_salt = is_var_temp_or_salt(src_var, dest_var)
 
     # Destination grid
     if dest_name == 'MOM':
@@ -326,7 +384,8 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
     time_points = f.variables['time'][time_idxs]
 
     for t_idx, t_pt in zip(time_idxs, time_points):
-        ext_src_data = extend_src_data(src_data[t_idx, :], src_grid, global_src_grid)
+        ext_src_data = extend_src_data(src_data[t_idx, :], src_grid, global_src_grid,
+                                        temp_or_salt)
         dest_data = regrid(regrid_weights, ext_src_data, dest_grid)
 
         # FIXME: issue with regridding in bottom left corner of grid. This is
