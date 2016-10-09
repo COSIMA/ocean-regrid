@@ -460,7 +460,7 @@ def main():
               "please move use the --append option.", file=sys.stderr)
         return 1
 
-    ret = do_regridding(args.src_name, (args.src_hgrid), args.src_vgrid,
+    ret = do_regridding(args.src_name, (args.src_hgrid,), args.src_vgrid,
                         args.src_data_file, args.src_var,
                         args.dest_name, args.dest_hgrid, args.dest_vgrid,
                         args.dest_data_file, args.dest_var,

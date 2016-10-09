@@ -41,23 +41,14 @@ class TestRegrid():
             os.remove(output)
 
         src_name = 'ORAS4'
-        src_hgrid = os.path.join(input_dir, 'coords_T.nc')
-        src_vgrid = os.path.join(input_dir, 'coords_T.nc')
         src_data_file = os.path.join(input_dir, 'thetao_oras4_1m_2014_grid_T.nc')
-        src_var = 'thetao'
         dest_name = 'MOM'
-        dest_hgrid = os.path.join(input_dir, 'ocean_hgrid.nc')
-        dest_vgrid = os.path.join(input_dir, 'ocean_vgrid.nc')
         dest_data_file = output
-        dest_var = 'temp'
-        dest_mask = os.path.join(input_dir, 'ocean_mask.nc')
 
-        args = [src_name, src_hgrid, src_vgrid, src_data_file, src_var,
-                dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
-                '--dest_mask', dest_mask]
+        args = [src_name, src_data_file, 'temp', dest_name, dest_data_file]
 
         my_dir = os.path.dirname(os.path.realpath(__file__))
-        cmd = [os.path.join(my_dir, '../', 'regrid.py')] + args
+        cmd = [os.path.join(my_dir, '../', 'regrid_simple.py')] + args
         ret = sp.call(cmd)
         assert(ret == 0)
 
