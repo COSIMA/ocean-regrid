@@ -18,6 +18,8 @@ install:
 
   - conda env create -f regrid.yml
   - source activate regrid
+  - wget http://s3-ap-southeast-2.amazonaws.com/dp-drop/ocean-regrid/grid_defs.tar.gz
+  - tar zxf grid_defs.tar.gz
   - cd contrib
   - source build_esmf.sh
   - cd ../
