@@ -19,7 +19,6 @@ from tripolar_grid import TripolarGrid
 from godas_grid import GodasGrid
 from oras_grid import OrasGrid
 
-import file_util as futil
 import util
 
 """
@@ -352,10 +351,10 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
     time_origin = util.get_time_origin(src_data_file)
     if not os.path.exists(dest_data_file):
         if dest_name == 'MOM':
-            futil.create_mom_output(dest_grid, dest_data_file, time_origin,
+            util.create_mom_output(dest_grid, dest_data_file, time_origin,
                               ''.join(sys.argv))
         else:
-            futil.create_nemo_output(dest_grid, dest_data_file, time_origin,
+            util.create_nemo_output(dest_grid, dest_data_file, time_origin,
                                ''.join(sys.argv))
 
     # Do regridding on each time point.
@@ -403,10 +402,10 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
             if dest_grid.mask is not None:
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
                 dest_data = np.ma.array(dest_data, mask=mask)
-            futil.write_mom_output_at_time(dest_data_file, dest_var, long_name,
+            util.write_mom_output_at_time(dest_data_file, dest_var, long_name,
                                      units, dest_data, t_idx, t_pt, write_ic)
         else:
-            futil.write_nemo_output_at_time(dest_data_file, dest_var, long_name,
+            util.write_nemo_output_at_time(dest_data_file, dest_var, long_name,
                                       units, dest_data, t_idx, t_pt, write_ic)
 
     f.close()
