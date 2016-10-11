@@ -14,7 +14,7 @@ grid_defs_error = \
 """
 Grid definitions directory {} not found.
 please download it with:
-wget http://s3-ap-southeast-2.amazonaws.com/dp-drop/ocean-nudge/grid_defs.tar.gz
+wget http://s3-ap-southeast-2.amazonaws.com/dp-drop/ocean-regrid/grid_defs.tar.gz
 and unzip into the same directory as this executable.
 """
 
