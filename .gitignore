@@ -3,6 +3,8 @@ grid_defs*
 test/*.gz
 test/test_data
 test/.cache
+release/build
+release/dist
 
 .cache
 

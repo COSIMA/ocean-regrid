@@ -19,9 +19,8 @@ from tripolar_grid import TripolarGrid
 from godas_grid import GodasGrid
 from oras_grid import OrasGrid
 
-from file_util import create_mom_output, write_mom_output_at_time
-from file_util import create_nemo_output, write_nemo_output_at_time
-from util import normalise_lons, get_time_origin
+import file_util as futil
+import util
 
 """
 Create ocean model IC based on reanalysis data.
@@ -350,13 +349,13 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
         assert(os.path.exists(regrid_weights))
 
     # Create output file
-    time_origin = get_time_origin(src_data_file)
+    time_origin = util.get_time_origin(src_data_file)
     if not os.path.exists(dest_data_file):
         if dest_name == 'MOM':
-            create_mom_output(dest_grid, dest_data_file, time_origin,
+            futil.create_mom_output(dest_grid, dest_data_file, time_origin,
                               ''.join(sys.argv))
         else:
-            create_nemo_output(dest_grid, dest_data_file, time_origin,
+            futil.create_nemo_output(dest_grid, dest_data_file, time_origin,
                                ''.join(sys.argv))
 
     # Do regridding on each time point.
@@ -404,10 +403,10 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
             if dest_grid.mask is not None:
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
                 dest_data = np.ma.array(dest_data, mask=mask)
-            write_mom_output_at_time(dest_data_file, dest_var, long_name,
+            futil.write_mom_output_at_time(dest_data_file, dest_var, long_name,
                                      units, dest_data, t_idx, t_pt, write_ic)
         else:
-            write_nemo_output_at_time(dest_data_file, dest_var, long_name,
+            futil.write_nemo_output_at_time(dest_data_file, dest_var, long_name,
                                       units, dest_data, t_idx, t_pt, write_ic)
 
     f.close()
