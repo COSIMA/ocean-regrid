@@ -64,13 +64,13 @@ def regrid_columns(src_data, src_grid, dest_grid, temp_or_salt):
     # 1a. At every level fill everything with nearest neighbour. This
     # effectively removes bathymetry with the new (previously masked) deep
     # points having values based on neighbours at the same depth.
-    for level in range(src_data.shape[0]):
-        ind = nd.distance_transform_edt(src_grid.mask[level, :, :],
+    for lev in range(src_data.shape[0]):
+        ind = nd.distance_transform_edt(src_grid.mask[lev, :, :],
                                         return_distances=False,
                                         return_indices=True)
-        tmp = src_data_a[level, :, :]
+        tmp = src_data_a[lev, :, :]
         tmp = tmp[tuple(ind)]
-        src_data_a[level, :, :] = tmp[:]
+        src_data_a[lev, :, :] = tmp[:]
 
     # 1b. First fill in the top level.
     ind = nd.distance_transform_edt(src_grid.mask[0, :, :],
@@ -82,7 +82,7 @@ def regrid_columns(src_data, src_grid, dest_grid, temp_or_salt):
 
     # Now fill in all missing values down the columns.
     for lev in range(1, src_data.shape[0]):
-        cmask = np.where(src_grid.mask[level, :, :])
+        cmask = np.where(src_grid.mask[lev, :, :])
         if temp_or_salt == 'temp':
             best = np.minimum(src_data_b[lev-1, cmask[0], cmask[1]],
                               src_data_a[lev, cmask[0], cmask[1]])
@@ -258,6 +258,16 @@ def is_var_temp_or_salt(src_var, dest_var):
         if v == 'temp' or v == 'votemper' or v == 'pottmp':
             return 'temp'
 
+def check_src_data_ranges(src_data, temp_or_salt):
+
+    if temp_or_salt == 'temp':
+        assert np.max(src_data) < 320
+        assert np.min(src_data) >= -10
+
+    if temp_or_salt == 'salt':
+        assert np.max(src_data) >= 0
+        assert np.max(src_data) < 60
+
 
 def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
@@ -367,6 +377,12 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
         src_data = src_grid.apply_grid_mask(src_data)
     else:
         src_data = src_var[:]
+
+        # Give the grid a new mask, this is because there are tiny differences
+        # in the mask for each time point of GODAS data.
+        src_grid.set_mask(src_data.mask[month - 1, :, :, :])
+
+    check_src_data_ranges(src_data, temp_or_salt)
 
     if month is not None:
         time_idxs = [month - 1]

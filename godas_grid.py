@@ -27,3 +27,7 @@ class GodasGrid(Grid):
                 mask = f.variables['POT'][0, :].mask[:]
 
         super(GodasGrid, self).__init__(x_t, y_t, z, mask, description)
+
+
+    def set_mask(self, new_mask):
+        self.mask = new_mask[:]
