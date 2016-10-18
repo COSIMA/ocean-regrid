@@ -389,7 +389,6 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
     else:
         time_idxs = range(src_var.shape[0])
     time_points = f.variables['time'][time_idxs]
-
     for t_idx, t_pt in zip(time_idxs, time_points):
         ext_src_data = extend_src_data(src_data[t_idx, :], src_grid, global_src_grid,
                                         temp_or_salt)
@@ -412,6 +411,10 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
             long_name = src_var.long_name
         except AttributeError:
             long_name = ''
+
+        # Input file has units in hours, convert to days.
+        if 'hours since' in f.variables['time'].units:
+            t_pt = int(t_pt / 24.)
 
         if dest_name == 'MOM':
             # Apply ocean mask.
