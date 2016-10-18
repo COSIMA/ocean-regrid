@@ -380,7 +380,11 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
 
         # Give the grid a new mask, this is because there are tiny differences
         # in the mask for each time point of GODAS data.
-        src_grid.set_mask(src_data.mask[month - 1, :, :, :])
+        if month is None:
+            idx = 0
+        else:
+            idx = month - 1
+        src_grid.set_mask(src_data.mask[idx, :, :, :])
 
     check_src_data_ranges(src_data, temp_or_salt)
 
