@@ -101,8 +101,6 @@ def main():
     args = [args.src_name, src_hgrids[0], src_vgrid,
             args.src_data_file, src_var, args.dest_name,
             dest_hgrid, dest_vgrid, args.output_file, dest_var] + mm_arg
-    print(args)
-
     exe = os.path.join(os.path.dirname(__file__), 'regrid.py')
     return sp.call([exe] + args)
 
