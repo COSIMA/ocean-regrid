@@ -9,9 +9,7 @@ class RegularGrid(Grid):
 
     def __init__(self, num_lons, num_lats, levels, mask=None, description=''):
 
-        dx = 360.0 / num_lats
-        dy = 180.0 / num_lons
-        dx_half = dx / 2
+        dy = 180.0 / num_lats
         dy_half = dy / 2
 
         # Set lats and lons.
