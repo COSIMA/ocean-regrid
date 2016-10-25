@@ -14,10 +14,16 @@ data_tarball_url = 'http://s3-ap-southeast-2.amazonaws.com/dp-drop/ocean-regrid/
 def check_output_fields(model_name, output):
 
     with nc.Dataset(output) as f:
-        if model_name == 'MOM':
-            assert f.variables['temp'].units == 'C' or \
-                'celsius' in f.variables['temp'].units.lower()
-            temp = f.variables['temp']
+        if 'MOM' in model_name:
+
+            if f.variables.has_key('temp'):
+                assert f.variables['temp'].units == 'C' or \
+                    'celsius' in f.variables['temp'].units.lower()
+                var = f.variables['temp']
+                var_name = 'temp'
+            else:
+                var = f.variables['salt']
+                var_name = 'salt'
 
             x_t = f.variables['GRID_X_T'][:]
             y_t = f.variables['GRID_Y_T'][:]
@@ -30,17 +36,24 @@ def check_output_fields(model_name, output):
 
         else:
             assert model_name == 'NEMO'
-            temp = f.variables['votemper']
+            var = f.variables['votemper']
+            var_name = 'temp'
 
-        if temp.units == 'C' or 'celsius' in temp.units.lower():
-            for t in range(temp.shape[0]):
-                assert np.max(temp[t, :]) < 40.0
-                assert np.min(temp[t, :]) > -10.0
+        assert var_name == 'temp' or var_name == 'salt'
+
+        if var_name == 'temp':
+            if var.units == 'C' or 'celsius' in var.units.lower():
+                for t in range(var.shape[0]):
+                    assert np.max(var[t, :]) < 40.0
+                    assert np.min(var[t, :]) > -10.0
+            else:
+                for t in range(var.shape[0]):
+                    assert np.max(var[t, :]) < 320.0
+                    assert np.min(var[t, :]) > 260.0
         else:
-            for t in range(temp.shape[0]):
-                assert np.max(temp[t, :]) < 320.0
-                assert np.min(temp[t, :]) > 260.0
-
+            for t in range(var.shape[0]):
+                assert np.max(var[t, :]) < 50.0
+                assert np.min(var[t, :]) >= 0.0
 
 
 class TestRegrid():
@@ -82,6 +95,32 @@ class TestRegrid():
         dest_data_file = output
 
         args = [src_name, src_data_file, 'temp', dest_name, dest_data_file]
+
+        my_dir = os.path.dirname(os.path.realpath(__file__))
+        cmd = [os.path.join(my_dir, '../', 'regrid_simple.py')] + args
+        ret = sp.call(cmd)
+        assert(ret == 0)
+
+        # Check that outputs exist.
+        check_output_fields('MOM', output)
+        assert(os.path.exists(output))
+
+    @pytest.mark.mom1
+    def test_oras4_to_mom1(self, input_dir, output_dir):
+        """
+        Regrid ORAS4 to MOM 1 degree.
+        """
+
+        output = os.path.join(output_dir, 'mom1_oras4_temp.nc')
+        if os.path.exists(output):
+            os.remove(output)
+
+        src_name = 'ORAS4'
+        src_data_file = os.path.join(input_dir, 'so_oras4_1m_2014_grid_T.nc')
+        dest_name = 'MOM1'
+        dest_data_file = output
+
+        args = [src_name, src_data_file, 'salt', dest_name, dest_data_file]
 
         my_dir = os.path.dirname(os.path.realpath(__file__))
         cmd = [os.path.join(my_dir, '../', 'regrid_simple.py')] + args

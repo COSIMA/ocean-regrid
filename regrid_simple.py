@@ -45,7 +45,8 @@ def main():
     parser.add_argument('output_file', help='Name of the destination/output file.')
     args = parser.parse_args()
 
-    assert args.dest_name == 'MOM' or args.dest_name == 'NEMO'
+    assert args.dest_name == 'MOM' or args.dest_name == 'MOM1' or \
+        args.dest_name == 'NEMO'
     assert args.src_name == 'GODAS' or args.src_name == 'ORAS4'
     assert args.src_var == 'salt' or args.src_var == 'temp'
 
@@ -69,6 +70,11 @@ def main():
         dest_vgrid = os.path.join(grid_defs, 'ocean_vgrid.nc')
         dest_mask = os.path.join(grid_defs, 'ocean_mask.nc')
         mm_arg = ['--dest_mask', dest_mask]
+    elif args.dest_name == 'MOM1':
+        dest_hgrid = os.path.join(grid_defs, 'grid_spec.nc')
+        dest_vgrid = os.path.join(grid_defs, 'grid_spec.nc')
+        dest_mask = os.path.join(grid_defs, 'grid_spec.nc')
+        mm_arg = ['--dest_mask', dest_mask]
     else:
         dest_hgrid = os.path.join(grid_defs, 'coordinates.nc')
         dest_vgrid = os.path.join(grid_defs, 'data_1m_potential_temperature_nomask.nc')
@@ -83,7 +89,7 @@ def main():
         temp_src_var = 'pottmp'
         salt_src_var = 'salt'
 
-    if args.dest_name == 'MOM':
+    if args.dest_name == 'MOM' or args.dest_name == 'MOM1':
         temp_dest_var = 'temp'
         salt_dest_var = 'salt'
     else:

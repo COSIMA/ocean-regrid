@@ -13,6 +13,7 @@ from scipy import interp
 from scipy import ndimage as nd
 
 from mom_grid import MomGrid
+from mom1_grid import Mom1Grid
 from nemo_grid import NemoGrid
 from regular_grid import RegularGrid
 from tripolar_grid import TripolarGrid
@@ -287,13 +288,18 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
     temp_or_salt = is_var_temp_or_salt(src_var, dest_var)
 
     # Destination grid
-    if dest_name == 'MOM':
+    if 'MOM' in dest_name: 
         if dest_mask is None:
             print('\n Error: please provide a --dest_mask when regridding to MOM.\n',
                   file=sys.stderr)
             return None
-        title = 'MOM tripolar t-cell grid'
+
+    if dest_name == 'MOM':
+        title = 'MOM tripolar 0.25 degree t-cell grid'
         dest_grid = MomGrid(dest_hgrid, dest_vgrid, dest_mask, title)
+    elif dest_name == 'MOM1':
+        title = 'MOM tripolar 1 degree t-cell grid'
+        dest_grid = Mom1Grid(dest_hgrid, dest_vgrid, dest_mask, title)
     else:
         title = 'NEMO tripolar t-cell grid'
         dest_grid = NemoGrid(dest_hgrid, dest_vgrid, dest_mask, title)
@@ -360,7 +366,7 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
     # Create output file
     time_origin = util.get_time_origin(src_data_file)
     if not os.path.exists(dest_data_file):
-        if dest_name == 'MOM':
+        if 'MOM' in dest_name:
             util.create_mom_output(dest_grid, dest_data_file, time_origin,
                               ''.join(sys.argv))
         else:
@@ -418,7 +424,7 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
         if 'hours since' in f.variables['time'].units:
             t_pt = int(t_pt / 24.)
 
-        if dest_name == 'MOM':
+        if 'MOM' in dest_name:
             # Apply ocean mask.
             if dest_grid.mask is not None:
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
@@ -470,9 +476,9 @@ def main():
                         help='Append to destination file.')
     args = parser.parse_args()
 
-    assert args.dest_name == 'MOM' or args.dest_name == 'NEMO'
+    assert args.dest_name == 'MOM' or args.dest_name == 'MOM1' or \
+        args.dest_name == 'NEMO'
     assert args.src_name == 'GODAS' or args.src_name == 'ORAS4'
-
 
     if os.path.exists(args.dest_data_file) and not args.append:
         print("Output file {} already exists, ".format(args.dest_data_file) + \

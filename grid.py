@@ -46,8 +46,6 @@ class Grid(object):
         else:
             self.mask = mask
 
-        self.clon_t = None
-        self.clat_t = None
 
     def make_corners(self):
 
