@@ -71,14 +71,6 @@ def get_time_origin(filename):
 
     return dt.date(date.year, date.month, date.day)
 
-def row_idx_largest_lon(lons):
-    """
-    The row index with the largest lon.
-    """
-    r, _  = np.unravel_index(np.argmax(lons), lons.shape)
-
-    return r
-
 def col_idx_largest_lat(lats):
     """
     The col index with the largest lat.
@@ -104,8 +96,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     lons.point_spacing = 'even'
     lons.axis = 'X'
     # MOM needs this to be a single dimension
-    row = row_idx_largest_lon(ocean_grid.x_t[:])
-    lons[:] = ocean_grid.x_t[row, :]
+    lons[:] = ocean_grid.x_t[ocean_grid.x_t.shape[0] / 2, :]
 
     lats = f.createVariable('GRID_Y_T', 'f8', ('GRID_Y_T'))
     lats.long_name = 'Nominal Latitude of T-cell center'

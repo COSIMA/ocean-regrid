@@ -18,16 +18,29 @@ def check_output_fields(model_name, output):
             assert f.variables['temp'].units == 'C' or \
                 'celsius' in f.variables['temp'].units.lower()
             temp = f.variables['temp']
+
+            x_t = f.variables['GRID_X_T'][:]
+            y_t = f.variables['GRID_Y_T'][:]
+
+            # Make sure that lats and lons are nicely spaced apart. Don't want
+            # any big jumps.  These are 'representational values' for lat and
+            # lon only because they are a single dimension on a irregular grid.
+            assert np.max(np.diff(x_t)) <= (360. / float(x_t.shape[0])) * 2
+            assert np.max(np.diff(y_t)) <= (180. / float(y_t.shape[0])) * 2
+
         else:
             assert model_name == 'NEMO'
             temp = f.variables['votemper']
 
         if temp.units == 'C' or 'celsius' in temp.units.lower():
-            assert np.max(temp[:]) < 40.0
-            assert np.min(temp[:]) > -10.0
+            for t in range(temp.shape[0]):
+                assert np.max(temp[t, :]) < 40.0
+                assert np.min(temp[t, :]) > -10.0
         else:
-            assert np.max(temp[:]) < 320.0
-            assert np.min(temp[:]) > 260.0
+            for t in range(temp.shape[0]):
+                assert np.max(temp[t, :]) < 320.0
+                assert np.min(temp[t, :]) > 260.0
+
 
 
 class TestRegrid():
@@ -53,6 +66,7 @@ class TestRegrid():
         return os.path.join(test_data_dir, 'output')
 
 
+    @pytest.mark.mom
     def test_oras4_to_mom(self, input_dir, output_dir):
         """
         Regrid ORAS4 to MOM.
@@ -75,9 +89,11 @@ class TestRegrid():
         assert(ret == 0)
 
         # Check that outputs exist.
+        check_output_fields('MOM', output)
         assert(os.path.exists(output))
 
     @pytest.mark.godas
+    @pytest.mark.nemo
     def test_godas_to_nemo(self, input_dir, output_dir):
         """
         Regrid ORAS4 to MOM.
