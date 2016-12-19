@@ -436,6 +436,13 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
                                       units, dest_data, t_idx, t_pt, write_ic)
 
     f.close()
+    for f in [global_src_grid_scrip, global_src_grid_scrip + '_test',
+              dest_grid_scrip, dest_grid_scrip + '_test']:
+        try:
+            os.remove(f)
+        except OSError:
+            pass
+
     return regrid_weights
 
 def check_files(filenames):
