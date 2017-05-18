@@ -19,6 +19,7 @@ from regular_grid import RegularGrid
 from tripolar_grid import TripolarGrid
 from godas_grid import GodasGrid
 from oras_grid import OrasGrid
+from woa_grid import WoaGrid
 
 import util
 
@@ -254,9 +255,9 @@ def check_dependencies(use_mpi):
 def is_var_temp_or_salt(src_var, dest_var):
 
     for v in [src_var.lower(), dest_var.lower()]:
-        if v == 'salt' or v == 'vosaline':
+        if v == 'salt' or v == 'vosaline' or v == 'practical_salinity':
             return 'salt'
-        if v == 'temp' or v == 'votemper' or v == 'pottmp':
+        if v == 'temp' or v == 'votemper' or v == 'pottmp' or v == 'potential_temperature':
             return 'temp'
 
 def check_src_data_ranges(src_data, temp_or_salt):
@@ -308,16 +309,24 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
     if src_name == 'ORAS4':
         assert len(src_hgrids) >= 1 and len(src_hgrids) <= 3
         src_grid = OrasGrid(src_hgrids, description='ORAS4')
-    else:
+    elif src_name == 'GODAS':
         assert len(src_hgrids) == 1
         src_grid = GodasGrid(src_hgrids[0], description='GODAS')
+    elif src_name == 'WOA':
+        assert len(src_hgrids) == 1
+        src_grid = WoaGrid(src_hgrids[0], description='WOA')
+    else:
+        print('\n Error: invalid source name: {}.\n'.format(src_name),
+            file=sys.stderr)
+        return None
+        
 
     # An extra, source-like grids but extended to the whole globe, including
     # maximum depth. The reanalysis grids have limited domain and/or depth.
     if src_name == 'ORAS4':
         global_src_grid = TripolarGrid(src_grid, dest_grid.z,
                                        description='ORAS4')
-    else:
+    elif src_name == 'GODAS' or src_name == 'WOA':
         num_lat_points = int(180.0 / src_grid.dy)
         num_lon_points = int(360.0 / src_grid.dx)
         description = 'GODAS Equidistant Lat Lon Grid'
@@ -384,11 +393,12 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
     else:
         src_data = src_var[:]
 
-        # Give the grid a new mask, this is because there are tiny differences
-        # in the mask for each time point of GODAS data.
-        new_mask = np.sum(src_data.mask[:, :, :, :], axis=0)
-        new_mask[np.where(new_mask > 1)] = 1
-        src_grid.set_mask(new_mask)
+        if src_name == 'GODAS':
+            # Give the grid a new mask, this is because there are tiny differences
+            # in the mask for each time point of GODAS data.
+            new_mask = np.sum(src_data.mask[:, :, :, :], axis=0)
+            new_mask[np.where(new_mask > 1)] = 1
+            src_grid.set_mask(new_mask)
 
     check_src_data_ranges(src_data, temp_or_salt)
 
@@ -440,6 +450,7 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
               dest_grid_scrip, dest_grid_scrip + '_test']:
         try:
             os.remove(f)
+            pass
         except OSError:
             pass
 
