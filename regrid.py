@@ -12,16 +12,17 @@ import netCDF4 as nc
 from scipy import interp
 from scipy import ndimage as nd
 
-from mom_grid import MomGrid
-from mom1_grid import Mom1Grid
-from nemo_grid import NemoGrid
-from regular_grid import RegularGrid
-from tripolar_grid import TripolarGrid
-from godas_grid import GodasGrid
-from oras_grid import OrasGrid
-from woa_grid import WoaGrid
+from .mom_grid import MomGrid
+from .mom1_grid import Mom1Grid
+from .nemo_grid import NemoGrid
+from .regular_grid import RegularGrid
+from .tripolar_grid import TripolarGrid
+from .godas_grid import GodasGrid
+from .oras_grid import OrasGrid
+from .woa_grid import WoaGrid
 
-import util
+
+from regridder import util
 
 """
 Create ocean model IC based on reanalysis data.
@@ -359,7 +360,7 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
                                    '-s', global_src_grid_scrip,
                                    '-d', dest_grid_scrip,
                                    '-m', 'bilinear', '-w', regrid_weights])
-        except sp.CalledProcessError, e:
+        except sp.CalledProcessError as e:
             print("Error: ESMF_RegridWeightGen failed return code {}".format(e.returncode),
                   file=sys.stderr)
             print(e.output, file=sys.stderr)

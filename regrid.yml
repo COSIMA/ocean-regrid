@@ -1,6 +1,7 @@
 name: regrid
 channels: !!python/tuple
-- !!python/unicode 'defaults'
+- !!python/unicode
+  'defaults'
 dependencies:
 - basemap=1.0.7=np111py27_0
 - cairo=1.12.18=6
@@ -55,6 +56,7 @@ dependencies:
 - sqlite=3.13.0=0
 - tk=8.5.18=0
 - wheel=0.29.0=py27_0
+- yaml=0.1.6=0
 - zlib=1.2.8=3
-prefix: /home/599/nah599/more_home/anaconda2/envs/regrid
+prefix: /home/nic/anaconda2/envs/regrid
 

@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import numpy as np
 import netCDF4 as nc
-import exceptions
 
 class Grid(object):
 

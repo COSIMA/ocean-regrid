@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 import numpy as np
-from grid import Grid
+from .grid import Grid
 
 class RegularGrid(Grid):
 
