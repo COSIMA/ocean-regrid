@@ -23,16 +23,12 @@ class Grid(object):
             self.dy = abs(self.y_t[1, 0] - self.y_t[0, 0])
             self.dx = abs(self.x_t[0, 1] - self.x_t[0, 0])
         else:
-            # There is not constant dx, dy.
+            # There is no constant dx, dy.
             self.dy = None
             self.dx = None
 
             self.x_t = lons
             self.y_t = lats
-
-        self.num_lat_points = self.x_t.shape[0]
-        self.num_lon_points = self.x_t.shape[1]
-        self.num_levels = len(levels)
 
         self.z = levels
         self.description = description
@@ -45,6 +41,17 @@ class Grid(object):
         else:
             self.mask = mask
 
+    @property
+    def num_lat_points(self):
+        return self.x_t.shape[0]
+
+    @property
+    def num_lon_points(self):
+        return self.x_t.shape[1]
+
+    @property
+    def num_levels(self):
+        return len(self.z)
 
     def make_corners(self):
 

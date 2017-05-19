@@ -7,6 +7,7 @@ import tempfile
 import argparse
 import numpy as np
 import numba
+import copy
 import subprocess as sp
 import netCDF4 as nc
 from scipy import interp
@@ -321,18 +322,25 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
             file=sys.stderr)
         return None
         
-
-    # An extra, source-like grids but extended to the whole globe, including
+    # The source grids need to be extended to the whole globe, including
     # maximum depth. The reanalysis grids have limited domain and/or depth.
     if src_name == 'ORAS4':
         global_src_grid = TripolarGrid(src_grid, dest_grid.z,
                                        description='ORAS4')
-    elif src_name == 'GODAS' or src_name == 'WOA':
+    elif src_name == 'GODAS': 
         num_lat_points = int(180.0 / src_grid.dy)
         num_lon_points = int(360.0 / src_grid.dx)
         description = 'GODAS Equidistant Lat Lon Grid'
         global_src_grid = RegularGrid(num_lon_points, num_lat_points,
                                       dest_grid.z, description=description)
+    elif src_name == 'WOA':
+        # WOA is global, just needs to have the depth fixed.
+        global_src_grid = copy.deepcopy(src_grid)
+        global_src_grid.z = dest_grid.z
+        global_src_grid.mask = np.zeros((global_src_grid.num_levels,
+                                         global_src_grid.num_lat_points,
+                                         global_src_grid.num_lon_points), dtype='int')
+
 
     # Write the source and destination grids out in SCRIP format. We override
     # the masks, we want to cover everything.
@@ -418,7 +426,8 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
         dest_data[np.where(dest_data <= np.min(ext_src_data))] = np.min(ext_src_data)
 
         # FIXME: run a smoother to remove sharp edges associated with missing data.
-        if dest_name == 'MOM' and write_ic:
+        if (src_name == 'GODAS' or src_name == 'ORAS4') and \
+            dest_name == 'MOM' and write_ic:
             dest_data = smooth_all(dest_data)
 
         # Write out

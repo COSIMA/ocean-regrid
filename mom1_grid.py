@@ -43,9 +43,6 @@ class Mom1Grid(Grid):
 
         super(Mom1Grid, self).__init__(x_t, y_t, z, mask, description)
 
-        self.num_lat_points = y_t.shape[0]
-        self.num_lon_points = y_t.shape[1]
-
     def make_corners(self):
         """
         Corners have already been read.
