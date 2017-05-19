@@ -290,13 +290,6 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
 
     temp_or_salt = is_var_temp_or_salt(src_var, dest_var)
 
-    # Destination grid
-    if 'MOM' in dest_name: 
-        if dest_mask is None:
-            print('\n Error: please provide a --dest_mask when regridding to MOM.\n',
-                  file=sys.stderr)
-            return None
-
     if dest_name == 'MOM':
         title = 'MOM tripolar 0.25 degree t-cell grid'
         dest_grid = MomGrid(dest_hgrid, dest_vgrid, dest_mask, title)
