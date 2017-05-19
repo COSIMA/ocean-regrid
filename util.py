@@ -97,7 +97,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     lons.point_spacing = 'even'
     lons.axis = 'X'
     # MOM needs this to be a single dimension
-    lons[:] = ocean_grid.x_t[ocean_grid.x_t.shape[0] / 2, :]
+    lons[:] = ocean_grid.x_t[ocean_grid.x_t.shape[0] // 2, :]
 
     lats = f.createVariable('GRID_Y_T', 'f8', ('GRID_Y_T'))
     lats.long_name = 'Nominal Latitude of T-cell center'
@@ -131,7 +131,7 @@ def write_mom_output_at_time(filename, var_name, var_longname, var_units,
                              var_data, time_idx, time_pt, write_ic=False):
 
     with nc.Dataset(filename, 'r+') as f:
-        if not f.variables.has_key(var_name):
+        if not var_name in f.variables:
             var = f.createVariable(var_name, 'f8',
                                    ('time', 'ZT', 'GRID_Y_T', 'GRID_X_T'),
                                    fill_value=-1.e+34)

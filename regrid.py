@@ -199,7 +199,7 @@ def apply_weights(src, dest_shape, n_s, n_b, row, col, s):
     dest[:] = 0.0
     src = src.flatten()
 
-    for i in xrange(1, n_s):
+    for i in range(1, n_s):
         dest[row[i]-1] = dest[row[i]-1] + s[i]*src[col[i]-1]
 
     return dest.reshape(dest_shape)

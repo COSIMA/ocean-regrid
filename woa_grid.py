@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import numpy as np
 import netCDF4 as nc
-from grid import Grid
+from .grid import Grid
 
 class WoaGrid(Grid):
 
