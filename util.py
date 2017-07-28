@@ -111,7 +111,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     zt = f.createVariable('ZT', 'f8', ('ZT'))
     zt.long_name = 'zt'
     zt.units = 'meters'
-    zt.positive = 'downdown'
+    zt.positive = 'down'
     zt.point_spacing = 'uneven'
     zt.axis = 'Z'
     zt[:] = ocean_grid.z[:]
