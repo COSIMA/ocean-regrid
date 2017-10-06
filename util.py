@@ -111,7 +111,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     zt = f.createVariable('ZT', 'f8', ('ZT'))
     zt.long_name = 'zt'
     zt.units = 'meters'
-    zt.positive = 'downdown'
+    zt.positive = 'down'
     zt.point_spacing = 'uneven'
     zt.axis = 'Z'
     zt[:] = ocean_grid.z[:]
@@ -134,7 +134,7 @@ def write_mom_output_at_time(filename, var_name, var_longname, var_units,
         if not var_name in f.variables:
             var = f.createVariable(var_name, 'f8',
                                    ('time', 'ZT', 'GRID_Y_T', 'GRID_X_T'),
-                                   fill_value=-1.e+34)
+                                   fill_value=-1.e+34, zlib=True, complevel=5, shuffle=True)
             var.missing_value = -1.e+34
             var.long_name = var_longname
             var.units = var_units

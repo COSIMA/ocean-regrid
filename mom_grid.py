@@ -25,9 +25,12 @@ class MomGrid(Grid):
             # Only take cell centres.
             z = f.variables['zeta'][1::2]
 
-        with nc.Dataset(mask_file) as f:
-            mask = np.zeros_like(f.variables['mask'], dtype=bool)
-            mask[f.variables['mask'][:] == 0.0] = True
+        if mask_file is None:
+            mask = np.zeros_like(x_t, dtype=bool)
+        else:
+            with nc.Dataset(mask_file) as f:
+                mask = np.zeros_like(f.variables['mask'], dtype=bool)
+                mask[f.variables['mask'][:] == 0.0] = True
 
         super(MomGrid, self).__init__(x_t, y_t, z, mask, description)
 
