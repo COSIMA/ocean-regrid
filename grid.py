@@ -187,12 +187,12 @@ class Grid(object):
         corner_lat = f.createVariable('grid_corner_lat', 'f8',
                                       ('grid_size', 'grid_corners'))
         corner_lat.units = 'degrees'
-        corner_lat[:] = clat[:].flatten()
+        corner_lat[:] = clat[:].reshape(-1,4)
 
         corner_lon = f.createVariable('grid_corner_lon', 'f8',
                                       ('grid_size', 'grid_corners'))
         corner_lon.units = 'degrees'
-        corner_lon[:] = clon[:].flatten()
+        corner_lon[:] = clon[:].reshape(-1,4)
 
         f.title = self.description
         f.history = history
