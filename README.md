@@ -14,7 +14,7 @@ Regrid global ocean data in 3d. Suppurts GODAS, ORAS4 reanalysis grids and MOM, 
 2. Install the [git](https://git-scm.com/) revision control system if you don't already have it.
 3. Download ocean-regrid:
 ```{bash}
-$ git clone --recursive https://github.com/nicjhan/ocean-regrid.git
+$ git clone --recursive https://github.com/COSIMA/ocean-regrid.git
 $ cd ocean-regrid
 ```
 4. Setup the Anaconda environment. This will download all the necessary Python packages.
