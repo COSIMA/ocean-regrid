@@ -85,12 +85,12 @@ def create_mom_output(ocean_grid, filename, start_date, history):
 
     f = nc.Dataset(filename, 'w')
 
-    f.createDimension('GRID_X_T', ocean_grid.num_lon_points)
-    f.createDimension('GRID_Y_T', ocean_grid.num_lat_points)
-    f.createDimension('ZT', ocean_grid.num_levels)
+    f.createDimension('lon', ocean_grid.num_lon_points)
+    f.createDimension('lat', ocean_grid.num_lat_points)
+    f.createDimension('depth', ocean_grid.num_levels)
     f.createDimension('time')
 
-    lons = f.createVariable('GRID_X_T', 'f8', ('GRID_X_T'))
+    lons = f.createVariable('lon', 'f8', ('lon'))
     lons.long_name = 'Nominal Longitude of T-cell center'
     lons.units = 'degree_east'
     lons.modulo = 360.
@@ -99,7 +99,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     # MOM needs this to be a single dimension
     lons[:] = ocean_grid.x_t[ocean_grid.x_t.shape[0] // 2, :]
 
-    lats = f.createVariable('GRID_Y_T', 'f8', ('GRID_Y_T'))
+    lats = f.createVariable('lat', 'f8', ('lat'))
     lats.long_name = 'Nominal Latitude of T-cell center'
     lats.units = 'degree_north'
     lats.point_spacing = 'uneven'
@@ -108,8 +108,8 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     col = col_idx_largest_lat(ocean_grid.y_t[:])
     lats[:] = ocean_grid.y_t[:, col]
 
-    zt = f.createVariable('ZT', 'f8', ('ZT'))
-    zt.long_name = 'zt'
+    zt = f.createVariable('depth', 'f8', ('depth'))
+    zt.long_name = 'depth'
     zt.units = 'meters'
     zt.positive = 'down'
     zt.point_spacing = 'uneven'
@@ -118,12 +118,12 @@ def create_mom_output(ocean_grid, filename, start_date, history):
 
     time = f.createVariable('time', 'f8', ('time'))
     time.long_name = 'time'
-    time.units = "days since {}-{}-{} 00:00:00".format(str(start_date.year).zfill(4),
+    time.units = "months since {}-{}-{} 00:00:00".format(str(start_date.year).zfill(4),
                                                        str(start_date.month).zfill(2),
                                                        str(start_date.day).zfill(2))
     time.cartesian_axis = "T"
-    time.calendar_type = "GREGORIAN"
-    time.calendar = "GREGORIAN"
+    time.calendar_type = "noleap"
+    time.calendar = "noleap"
 
     f.close()
 
