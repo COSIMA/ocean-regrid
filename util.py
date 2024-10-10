@@ -88,7 +88,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     f.createDimension('lon', ocean_grid.num_lon_points)
     f.createDimension('lat', ocean_grid.num_lat_points)
     f.createDimension('depth', ocean_grid.num_levels)
-    f.createDimension('time')
+    f.createDimension('time', 1)
 
     lons = f.createVariable('lon', 'f8', ('lon'))
     lons.long_name = 'Nominal Longitude of T-cell center'
@@ -108,13 +108,13 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     col = col_idx_largest_lat(ocean_grid.y_t[:])
     lats[:] = ocean_grid.y_t[:, col]
 
-    zt = f.createVariable('depth', 'f8', ('depth'))
-    zt.long_name = 'depth'
-    zt.units = 'meters'
-    zt.positive = 'down'
-    zt.point_spacing = 'uneven'
-    zt.axis = 'Z'
-    zt[:] = ocean_grid.z[:]
+    depth = f.createVariable('depth', 'f8', ('depth'))
+    depth.long_name = 'depth'
+    depth.units = 'meters'
+    depth.positive = 'down'
+    depth.point_spacing = 'uneven'
+    depth.axis = 'Z'
+    depth[:] = ocean_grid.z[:]
 
     time = f.createVariable('time', 'f8', ('time'))
     time.long_name = 'time'
@@ -133,7 +133,7 @@ def write_mom_output_at_time(filename, var_name, var_longname, var_units,
     with nc.Dataset(filename, 'r+') as f:
         if not var_name in f.variables:
             var = f.createVariable(var_name, 'f8',
-                                   ('time', 'ZT', 'GRID_Y_T', 'GRID_X_T'),
+                                   ('time', 'depth', 'lat', 'lon'),
                                    fill_value=-1.e+34, zlib=True, complevel=5, shuffle=True)
             var.missing_value = -1.e+34
             var.long_name = var_longname
