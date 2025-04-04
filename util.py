@@ -118,12 +118,12 @@ def create_mom_output(ocean_grid, filename, start_date, history):
 
     time = f.createVariable('time', 'f8', ('time'))
     time.long_name = 'time'
-    time.units = "months since {}-{}-{} 00:00:00".format(str(start_date.year).zfill(4),
+    time.units = "days since {}-{}-{} 00:00:00".format(str(start_date.year).zfill(4),
                                                        str(start_date.month).zfill(2),
                                                        str(start_date.day).zfill(2))
     time.cartesian_axis = "T"
-    time.calendar_type = "noleap"
-    time.calendar = "noleap"
+    time.calendar_type = "GREGORIAN"
+    time.calendar = "GREGORIAN"
 
     f.close()
 
