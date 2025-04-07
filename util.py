@@ -122,8 +122,8 @@ def create_mom_output(ocean_grid, filename, start_date, history):
                                                        str(start_date.month).zfill(2),
                                                        str(start_date.day).zfill(2))
     time.cartesian_axis = "T"
-    time.calendar_type = "GREGORIAN"
-    time.calendar = "GREGORIAN"
+    time.calendar_type = "noleap"
+    time.calendar = "noleap"
 
     f.close()
 
