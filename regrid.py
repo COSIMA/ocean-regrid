@@ -10,7 +10,7 @@ import numba
 import copy
 import subprocess as sp
 import netCDF4 as nc
-from scipy import interp
+from numpy import interp
 from scipy import ndimage as nd
 
 from .mom_grid import MomGrid
@@ -189,8 +189,6 @@ def extend_src_data(src_data, src_grid, global_src_grid, temp_or_salt):
 
     return global_src_data
 
-
-@numba.jit
 def apply_weights(src, dest_shape, n_s, n_b, row, col, s):
     """
     Apply ESMF regirdding weights.
