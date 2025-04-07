@@ -272,8 +272,8 @@ def check_src_data_ranges(src_data, temp_or_salt):
 
 
 def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
-                  dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var,
-                  dest_mask=None, month=None, regrid_weights=None, use_mpi=False,
+                  dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var, 
+                  mom_version, dest_mask=None, month=None, regrid_weights=None, use_mpi=False,
                   write_ic=False):
 
     if not check_dependencies(use_mpi):
@@ -290,7 +290,7 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
 
     if dest_name == 'MOM':
         title = 'MOM tripolar 0.25 degree t-cell grid'
-        dest_grid = MomGrid(dest_hgrid, dest_vgrid, dest_mask, title)
+        dest_grid = MomGrid(dest_hgrid, dest_vgrid, dest_mask, title, mom_version)
     elif dest_name == 'MOM1':
         title = 'MOM tripolar 1 degree t-cell grid'
         dest_grid = Mom1Grid(dest_hgrid, dest_vgrid, dest_mask, title)
@@ -493,11 +493,20 @@ def main():
                                This will speed up the calculation considerably.""")
     parser.add_argument('--append', default=False, action='store_true',
                         help='Append to destination file.')
+    
+    # Add mom_version argument only if dest_name is MOM
+    parser.add_argument('--mom_version', type=str, default=None,
+                        help="MOM version (e.g., MOM5, MOM6). Required if dest_name is MOM.")
+
     args = parser.parse_args()
 
     assert args.dest_name == 'MOM' or args.dest_name == 'MOM1' or \
         args.dest_name == 'NEMO'
     assert args.src_name == 'GODAS' or args.src_name == 'ORAS4'
+
+    # Ensure mom_version is provided when dest_name is MOM
+    if args.dest_name.startswith('MOM') and args.mom_version is None:
+        parser.error("--mom_version is required when dest_name is MOM")
 
     if os.path.exists(args.dest_data_file) and not args.append:
         print("Output file {} already exists, ".format(args.dest_data_file) + \
@@ -507,7 +516,7 @@ def main():
     ret = do_regridding(args.src_name, (args.src_hgrid,), args.src_vgrid,
                         args.src_data_file, args.src_var,
                         args.dest_name, args.dest_hgrid, args.dest_vgrid,
-                        args.dest_data_file, args.dest_var,
+                        args.dest_data_file, args.dest_var, args.mom_version,
                         args.dest_mask, args.month, args.regrid_weights,
                         args.use_mpi)
     return ret is None
