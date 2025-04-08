@@ -10,7 +10,7 @@ from .grid import Grid
 
 class MomGrid(Grid):
 
-    def __init__(self, h_grid_def, v_grid_def, mask_file, description, mom_version):
+    def __init__(self, h_grid_def, v_grid_def, mask_file, description, mom_version='MOM5'):
 
         with nc.Dataset(h_grid_def) as f:
 

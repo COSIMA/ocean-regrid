@@ -273,7 +273,7 @@ def check_src_data_ranges(src_data, temp_or_salt):
 
 def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
                   dest_name, dest_hgrid, dest_vgrid, dest_data_file, dest_var, 
-                  mom_version, dest_mask=None, month=None, regrid_weights=None, use_mpi=False,
+                  mom_version='MOM5', dest_mask=None, month=None, regrid_weights=None, use_mpi=False,
                   write_ic=False):
 
     if not check_dependencies(use_mpi):
@@ -495,18 +495,14 @@ def main():
                         help='Append to destination file.')
     
     # Add mom_version argument only if dest_name is MOM
-    parser.add_argument('--mom_version', type=str, default=None,
-                        help="MOM version (e.g., MOM5, MOM6). Required if dest_name is MOM.")
+    parser.add_argument('--mom_version', default='MOM5',
+                    help="MOM version (e.g., MOM5 or MOM6). Default is MOM5.")
 
     args = parser.parse_args()
 
     assert args.dest_name == 'MOM' or args.dest_name == 'MOM1' or \
         args.dest_name == 'NEMO'
     assert args.src_name == 'GODAS' or args.src_name == 'ORAS4'
-
-    # Ensure mom_version is provided when dest_name is MOM
-    if args.dest_name.startswith('MOM') and args.mom_version is None:
-        parser.error("--mom_version is required when dest_name is MOM")
 
     if os.path.exists(args.dest_data_file) and not args.append:
         print("Output file {} already exists, ".format(args.dest_data_file) + \
