@@ -10,7 +10,7 @@ from .grid import Grid
 
 class MomGrid(Grid):
 
-    def __init__(self, h_grid_def, v_grid_def, mask_file, description):
+    def __init__(self, h_grid_def, v_grid_def, mask_file, description, mom_version='MOM5'):
 
         with nc.Dataset(h_grid_def) as f:
 
@@ -22,8 +22,11 @@ class MomGrid(Grid):
             self.y_vt = f.variables['y'][:]
 
         with nc.Dataset(v_grid_def) as f:
-            # Only take cell centres.
-            z = f.variables['zeta'][1::2]
+            if mom_version == 'MOM5':
+                # Only take cell centres.
+                z = f.variables['zeta'][1::2]
+            else:
+                z = f.variables['zeta'][:]
 
         if mask_file is None:
             mask = np.zeros_like(x_t, dtype=bool)
