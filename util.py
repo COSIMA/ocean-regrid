@@ -4,6 +4,7 @@ import re
 import datetime as dt
 import netCDF4 as nc
 
+
 def normalise_lons(lons, data=None):
     """
     Normalise longitudes to 0-360 deg. Perform the same transformation on data.
@@ -89,6 +90,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     f.createDimension('lat', ocean_grid.num_lat_points)
     f.createDimension('depth', ocean_grid.num_levels)
     f.createDimension('time', 1)
+    f.createDimension('nbounds', 2) 
 
     lons = f.createVariable('lon', 'f8', ('lon'))
     lons.long_name = 'Nominal Longitude of T-cell center'
@@ -117,36 +119,45 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     depth[:] = ocean_grid.z[:]
 
     time = f.createVariable('time', 'f8', ('time'))
+    time.standard_name='time'
     time.long_name = 'time'
+    time.axis = "T"
+    time.climatology = "climatology_bounds" 
     time.units = "days since {}-{}-{} 00:00:00".format(str(start_date.year).zfill(4),
                                                        str(start_date.month).zfill(2),
                                                        str(start_date.day).zfill(2))
-    time.cartesian_axis = "T"
-    time.calendar_type = "noleap"
-    time.calendar = "noleap"
+
+
+    climatology_bounds = f.createVariable('climatology_bounds', 'f8', ('time','nbounds'))
+    climatology_bounds.comment = "This variable defines the bounds of the climatological time period for each time" 
+
+    f.setncattr('Conventions', 'CF-1.10')
+    f.setncattr('title', 'ACCESS-OM3 ocean initial conditions')
+    f.setncattr('history', 'Generated from WOA23 t & s, regridded onto MOM6 vertical and horizontal ocean grids')
 
     f.close()
 
-def write_mom_output_at_time(filename, var_name, var_longname, var_units,
-                             var_data, time_idx, time_pt, write_ic=False):
+def write_mom_output_at_time(filename, var_name, var_attrs,
+                             var_data, time_idx, time_pt, climat_bounds, write_ic=False):
 
     with nc.Dataset(filename, 'r+') as f:
         if not var_name in f.variables:
             var = f.createVariable(var_name, 'f8',
                                    ('time', 'depth', 'lat', 'lon'),
                                    fill_value=-1.e+34, zlib=True, complevel=5, shuffle=True)
+            var.setncatts(var_attrs)
             var.missing_value = -1.e+34
-            var.long_name = var_longname
-            var.units = var_units
 
         var = f.variables[var_name]
 
         if write_ic:
             var[0, :] = var_data[:]
             f.variables['time'][0] = time_pt
+            f.variables['climatology_bounds'][0] = climat_bounds
         else:
             var[time_idx, :] = var_data[:]
             f.variables['time'][time_idx] = time_pt
+            f.variables['climatology_bounds'][time_idx] = climat_bounds
 
 
 def create_nemo_output(ocean_grid, filename, start_date, history):
@@ -176,14 +187,13 @@ def create_nemo_output(ocean_grid, filename, start_date, history):
 
     f.close()
 
-def write_nemo_output_at_time(filename, var_name, var_longname, var_units,
+def write_nemo_output_at_time(filename, var_name, var_attrs,
                               var_data, time_idx, time_pt, write_ic=False):
 
     with nc.Dataset(filename, 'r+') as f:
         if not f.variables.has_key(var_name):
             var = f.createVariable(var_name, 'f8', ('time_counter', 'z', 'y', 'x'))
-            var.long_name = var_longname
-            var.units = var_units
+            var.setncatts(var_attrs)
 
         var = f.variables[var_name]
         if write_ic:
