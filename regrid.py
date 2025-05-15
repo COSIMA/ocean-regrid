@@ -31,6 +31,11 @@ Create ocean model IC based on reanalysis data.
 
 GODAS_BERING_STRAIGHT = [416, 184]
 
+# in a climatology, with 365 day calendar, whats the day of the middle of each month
+DAY_IN_MONTH = [
+    15.5,45,74.5,105,135.5,166,196.5,227.5,258,288.5,319,349.5
+]
+
 def find_nearest_index(array, value):
     return (np.abs(array - value)).argmin()
 
@@ -191,15 +196,13 @@ def extend_src_data(src_data, src_grid, global_src_grid, temp_or_salt):
 
 def apply_weights(src, dest_shape, n_s, n_b, row, col, s):
     """
-    Apply ESMF regirdding weights.
+    Apply ESMF regridding weights.
     """
 
-    dest = np.ndarray(dest_shape).flatten()
-    dest[:] = 0.0
+    dest = np.zeros(dest_shape).flatten()
     src = src.flatten()
 
-    for i in range(1, n_s):
-        dest[row[i]-1] = dest[row[i]-1] + s[i]*src[col[i]-1]
+    dest[row[1:n_s]-1] = dest[row[1:n_s]-1] + s[1:n_s]*src[col[1:n_s]-1]
 
     return dest.reshape(dest_shape)
 
@@ -228,6 +231,8 @@ def regrid(regrid_weights, src_data, dest_grid):
     return dest_data
 
 def smooth_all(data):
+
+    print('Smoothing ...')
 
     sigma = (2, 5, 5)
 
@@ -358,7 +363,8 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
             sp.check_output(mpi + ['ESMF_RegridWeightGen',
                                    '-s', global_src_grid_scrip,
                                    '-d', dest_grid_scrip,
-                                   '-m', 'bilinear', '-w', regrid_weights])
+                                   '-m', 'bilinear', '-w', regrid_weights,
+                                   '--netcdf4', '--no_log'])
         except sp.CalledProcessError as e:
             print("Error: ESMF_RegridWeightGen failed return code {}".format(e.returncode),
                   file=sys.stderr)
@@ -407,6 +413,8 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
     else:
         time_idxs = range(src_var.shape[0])
     time_points = f.variables['time'][time_idxs]
+    climat_bounds = f.variables['climatology_bounds'][time_idxs]
+
     for t_idx, t_pt in zip(time_idxs, time_points):
         ext_src_data = extend_src_data(src_data[t_idx, :], src_grid, global_src_grid,
                                         temp_or_salt)
@@ -421,30 +429,33 @@ def do_regridding(src_name, src_hgrids, src_vgrid, src_data_file, src_var,
             dest_name == 'MOM' and write_ic:
             dest_data = smooth_all(dest_data)
 
-        # Write out
-        try:
-            units = src_var.units
-        except AttributeError:
-            units = ''
-        try:
-            long_name = src_var.long_name
-        except AttributeError:
-            long_name = ''
+        # Pass source attributes to new var
+        attrs = src_var.ncattrs()
+        for i in ["crs","_FillValue", "grid_mapping"]:
+            try:
+                attrs.remove(i)
+            except ValueError:
+                pass
+        attrs_dict = dict()
+        for iAttr in attrs:
+            attrs_dict[iAttr] = src_var.getncattr(iAttr)
 
         # Input file has units in hours, convert to days.
         if 'hours since' in f.variables['time'].units:
             t_pt = int(t_pt / 24.)
+        if 'months since' in f.variables['time'].units:
+            t_pt = DAY_IN_MONTH(t_pt)
 
         if 'MOM' in dest_name:
             # Apply ocean mask.
             if dest_grid.mask is not None:
                 mask = np.stack([dest_grid.mask] * dest_grid.num_levels)
                 dest_data = np.ma.array(dest_data, mask=mask)
-            util.write_mom_output_at_time(dest_data_file, dest_var, long_name,
-                                     units, dest_data, t_idx, t_pt, write_ic)
+            util.write_mom_output_at_time(dest_data_file, dest_var, attrs_dict,
+                                     dest_data, t_idx, t_pt, climat_bounds, write_ic)
         else:
-            util.write_nemo_output_at_time(dest_data_file, dest_var, long_name,
-                                      units, dest_data, t_idx, t_pt, write_ic)
+            util.write_nemo_output_at_time(dest_data_file, dest_var, attrs_dict,
+                                      dest_data, t_idx, t_pt, write_ic)
 
     f.close()
     for f in [global_src_grid_scrip, global_src_grid_scrip + '_test',
