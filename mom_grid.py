@@ -27,7 +27,7 @@ class MomGrid(Grid):
                 z = f.variables['zeta'][1::2]
             else:
                 # Average layer interfaces to get cell centres.
-                z = (  f.variables['zeta'][0:-1]
+                z = (  f.variables['zeta'][:-1]
                      + f.variables['zeta'][1:] ) / 2
 
         if mask_file is None:
