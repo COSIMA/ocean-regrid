@@ -73,14 +73,20 @@ def get_time_origin(filename):
 
     return dt.date(date.year, date.month, date.day)
 
-def col_idx_largest_lat(lats):
+def _gridLatT_from_y_supergrid(y_supergrid):
     """
-    The col index with the largest lat.
+    Extracts an 1D array of latitudes at T-cell centers from the MOM6 supergrid.
+    ref: https://github.com/mom-ocean/MOM6/blob/d68ff1250e3fc8c75bf3bafc60b935fe5f7417a1/src/initialization/MOM_grid_initialize.F90#L333-L347
     """
-    _, c  = np.unravel_index(np.argmax(lats), lats.shape)
-
-    return c
-
+    a = np.asarray(y_supergrid)
+    if a.shape[0] < a.shape[1]:
+        a = a.T
+    nx_c, ny_c = a.shape
+    ni = (nx_c - 1) // 2
+    nj = (ny_c - 1) // 2
+    x_idx = int(ni/2)
+    ycol = a[x_idx, :]
+    return ycol[1:2*nj+1:2].copy()
 
 def create_mom_output(ocean_grid, filename, start_date, history):
 
@@ -107,8 +113,8 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     lats.point_spacing = 'uneven'
     lats.axis = 'Y'
     # MOM needs this to be a single dimension
-    col = col_idx_largest_lat(ocean_grid.y_t[:])
-    lats[:] = ocean_grid.y_t[:, col]
+    lat1d = _gridLatT_from_y_supergrid(ocean_grid.y_vt)
+    lats[:] = lat1d
 
     depth = f.createVariable('depth', 'f8', ('depth'))
     depth.long_name = 'depth'
