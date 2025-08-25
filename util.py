@@ -73,8 +73,12 @@ def get_time_origin(filename):
 
     return dt.date(date.year, date.month, date.day)
 
-def _gridLatT_from_corner_y(y_corner):
-    a = np.asarray(y_corner)
+def _gridLatT_from_y_supergrid(y_supergrid):
+    """
+    Extracts an 1D array of latitudes at T-cell centers from the MOM6 supergrid.
+    ref: https://github.com/mom-ocean/MOM6/blob/d68ff1250e3fc8c75bf3bafc60b935fe5f7417a1/src/initialization/MOM_grid_initialize.F90#L168
+    """
+    a = np.asarray(y_supergrid)
     if a.shape[0] < a.shape[1]:
         a = a.T
     nx_c, ny_c = a.shape
@@ -109,7 +113,7 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     lats.point_spacing = 'uneven'
     lats.axis = 'Y'
     # MOM needs this to be a single dimension
-    lat1d = _gridLatT_from_corner_y(ocean_grid.y_vt)
+    lat1d = _gridLatT_from_y_supergrid(ocean_grid.y_vt)
     lats[:] = lat1d
 
     depth = f.createVariable('depth', 'f8', ('depth'))
