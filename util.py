@@ -73,14 +73,6 @@ def get_time_origin(filename):
 
     return dt.date(date.year, date.month, date.day)
 
-def col_idx_largest_lat(lats):
-    """
-    The col index with the largest lat.
-    """
-    _, c  = np.unravel_index(np.argmax(lats), lats.shape)
-
-    return c
-
 def _gridLatT_from_corner_y(y_corner):
     a = np.asarray(y_corner)
     if a.shape[0] < a.shape[1]:
