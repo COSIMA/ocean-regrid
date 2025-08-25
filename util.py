@@ -76,7 +76,7 @@ def get_time_origin(filename):
 def _gridLatT_from_y_supergrid(y_supergrid):
     """
     Extracts an 1D array of latitudes at T-cell centers from the MOM6 supergrid.
-    ref: https://github.com/mom-ocean/MOM6/blob/d68ff1250e3fc8c75bf3bafc60b935fe5f7417a1/src/initialization/MOM_grid_initialize.F90#L168
+    ref: https://github.com/mom-ocean/MOM6/blob/d68ff1250e3fc8c75bf3bafc60b935fe5f7417a1/src/initialization/MOM_grid_initialize.F90#L333-L347
     """
     a = np.asarray(y_supergrid)
     if a.shape[0] < a.shape[1]:
