@@ -81,6 +81,16 @@ def col_idx_largest_lat(lats):
 
     return c
 
+def _gridLatT_from_corner_y(y_corner):
+    a = np.asarray(y_corner)
+    if a.shape[0] < a.shape[1]:
+        a = a.T
+    nx_c, ny_c = a.shape
+    ni = (nx_c - 1) // 2
+    nj = (ny_c - 1) // 2
+    x_idx = int(ni/2)
+    ycol = a[x_idx, :]
+    return ycol[1:2*nj+1:2].copy()
 
 def create_mom_output(ocean_grid, filename, start_date, history):
 
@@ -107,8 +117,12 @@ def create_mom_output(ocean_grid, filename, start_date, history):
     lats.point_spacing = 'uneven'
     lats.axis = 'Y'
     # MOM needs this to be a single dimension
-    col = col_idx_largest_lat(ocean_grid.y_t[:])
-    lats[:] = ocean_grid.y_t[:, col]
+    if hasattr(ocean_grid, 'y_vt') and ocean_grid.y_vt is not None:
+        lat1d = _gridLatT_from_corner_y(ocean_grid.y_vt)
+        lats[:] = lat1d
+    else:
+        col = col_idx_largest_lat(ocean_grid.y_t[:])
+        lats[:] = ocean_grid.y_t[:, col]
 
     depth = f.createVariable('depth', 'f8', ('depth'))
     depth.long_name = 'depth'
