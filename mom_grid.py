@@ -48,7 +48,7 @@ class MomGrid(Grid):
         # Corners of t points. Index 0 is bottom left and then
         # anti-clockwise.
         clon = np.empty((self.x_t.shape[0], self.x_t.shape[1], 4))
-        clon[:] = np.NAN
+        clon[:] = np.nan
         clon[:,:,0] = x[0:-1:2,0:-1:2]
         clon[:,:,1] = x[0:-1:2,2::2]
         clon[:,:,2] = x[2::2,2::2]
@@ -56,7 +56,7 @@ class MomGrid(Grid):
         assert(not np.isnan(np.sum(clon)))
 
         clat = np.empty((self.x_t.shape[0], self.x_t.shape[1], 4))
-        clat[:] = np.NAN
+        clat[:] = np.nan
         clat[:,:,0] = y[0:-1:2,0:-1:2]
         clat[:,:,1] = y[0:-1:2,2::2]
         clat[:,:,2] = y[2::2,2::2]

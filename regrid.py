@@ -6,12 +6,13 @@ import sys, os
 import tempfile
 import argparse
 import numpy as np
-import numba
 import copy
 import subprocess as sp
 import netCDF4 as nc
 from numpy import interp
 from scipy import ndimage as nd
+
+from .apply_weights import apply_weights
 
 from .mom_grid import MomGrid
 from .mom1_grid import Mom1Grid
@@ -193,21 +194,6 @@ def extend_src_data(src_data, src_grid, global_src_grid, temp_or_salt):
                                       global_src_grid)
 
     return global_src_data
-
-def apply_weights(src, dest_shape, n_s, n_b, row, col, s):
-    """
-    Apply ESMF regridding weights.
-    """
-
-    dest = np.zeros(dest_shape).flatten()
-    src = src.flatten()
-
-    weighted_src =  s[0:n_s]*src[col[0:n_s]-1]
-
-    for i in range(0, n_s):
-        dest[row[i]-1] = dest[row[i]-1] + weighted_src[i]
-
-    return dest.reshape(dest_shape)
 
 
 def regrid(regrid_weights, src_data, dest_grid):

@@ -23,6 +23,15 @@ $ conda env create -f regrid.yml
 $ source activate regrid
 ```
 
+## Pythran
+
+Install the `pythran` package into your Python environment and run
+```bash
+$ pythran apply_weights.py
+```
+
+to build the native-code extension for faster weight application.
+
 ## ESMF dependencies
 
 Install ESMF_RegridWeightGen. ESMF releases can be found [here](http://www.earthsystemmodeling.org/download/data/releases.shtml).

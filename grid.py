@@ -64,7 +64,7 @@ class Grid(object):
         # Set grid corners, we do these one corner at a time. Start at the 
         # bottom left and go anti-clockwise. This is the SCRIP convention.
         clon = np.empty((self.num_lat_points, self.num_lon_points, 4))
-        clon[:] = np.NAN
+        clon[:] = np.nan
         clon[:,:,0] = x - dx_half
         clon[:,:,1] = x + dx_half
         clon[:,:,2] = x + dx_half
@@ -72,7 +72,7 @@ class Grid(object):
         assert(not np.isnan(np.sum(clon)))
 
         clat = np.empty((self.num_lat_points, self.num_lon_points, 4))
-        clat[:] = np.NAN
+        clat[:] = np.nan
         clat[:,:,0] = y - dy_half
         clat[:,:,1] = y - dy_half
         clat[:,:,2] = y + dy_half
