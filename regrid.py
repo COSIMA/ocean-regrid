@@ -249,9 +249,9 @@ def check_dependencies(use_mpi):
 def is_var_temp_or_salt(src_var, dest_var):
 
     for v in [src_var.lower(), dest_var.lower()]:
-        if v == 'salt' or v == 'vosaline' or v == 'practical_salinity':
+        if v in ['salt', 'vosaline', 'practical_salinity', 'absolute_salinity']:
             return 'salt'
-        if v == 'temp' or v == 'votemper' or v == 'pottmp' or v == 'potential_temperature' or v == 'conservative_temperature':
+        if v in ['temp', 'votemper', 'pottmp', 'potential_temperature', 'conservative_temperature']:
             return 'temp'
 
 def check_src_data_ranges(src_data, temp_or_salt):
